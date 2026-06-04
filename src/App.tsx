@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -26,7 +26,10 @@ import { AiWaterReport }     from "./components/AiWaterReport";
 import { WeatherWidget }     from "./components/WeatherWidget";
 import { TrendsView }        from "./components/TrendsView";
 import { ChemLogInput }      from "./components/ChemLogInput";
+import { WaterChangeCard }   from "./components/WaterChangeCard";
 import { type PoolEntry, type ChemicalAddition } from "./hooks/usePoolEntries";
+import { useWaterChange }    from "./hooks/useWaterChange";
+import { daysUntilNextChange } from "./utils/waterChange";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
 
@@ -38,6 +41,7 @@ const FIELD_LABELS: Record<FieldKey, string> = {
 export default function App() {
   const { entries, loaded, addEntry, deleteEntry } = usePoolEntries();
   const { profile, saveProfile }                   = usePoolProfile();
+  const waterChange = useWaterChange();
   const { weather, loading: wxLoading, minutesAgo } = useWeather();
 
   const [form, setForm]       = useState({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
@@ -89,7 +93,24 @@ export default function App() {
   const chartData     = [...entries].reverse().slice(-20);
   const daysSinceLast = last ? daysSince(last.date) : null;
   const staleWarn     = daysSinceLast !== null && daysSinceLast >= STALE_DAYS;
-  const volumeM3      = profile.volumeLiters / 1000;
+  const volumeM3         = profile.volumeLiters / 1000;
+  const waterChangeDue   = waterChange.record ? daysUntilNextChange(waterChange.record) <= 0 : false;
+
+  // Push-Notification für Wasseraustausch (beim App-Öffnen, max. 1× pro Tag)
+  useEffect(() => {
+    if (!waterChange.record) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const daysLeft = daysUntilNextChange(waterChange.record);
+    if (daysLeft > 14) return;
+    const today       = new Date().toISOString().slice(0, 10);
+    const lastNotified = localStorage.getItem("waterChangeNotified");
+    if (lastNotified === today) return;
+    const body = daysLeft <= 0
+      ? `🚿 Heute Wasseraustausch empfohlen — ${profile.name} ${profile.volumeLiters}L`
+      : `⏳ Wasseraustausch in ${daysLeft} Tag${daysLeft === 1 ? "" : "en"} fällig`;
+    new Notification("Pool Bericht", { body, icon: "/favicon.svg" });
+    localStorage.setItem("waterChangeNotified", today);
+  }, [waterChange.record, profile]);
 
   const poolTips = last
     ? (["cl", "ph", "temp"] as FieldKey[])
@@ -177,6 +198,13 @@ export default function App() {
         {staleWarn && (
           <div style={{ background: "#ef4444", color: "white", padding: "10px 20px", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}>
             ⚠️ Letzte Messung vor {daysSinceLast} Tagen – bitte jetzt messen!
+          </div>
+        )}
+
+        {/* Wasseraustausch fällig */}
+        {waterChangeDue && (
+          <div style={{ background: "#b91c1c", color: "white", padding: "10px 20px", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}>
+            🚿 Wasseraustausch fällig – bitte jetzt wechseln!
           </div>
         )}
 
@@ -431,6 +459,13 @@ export default function App() {
                   <div style={{ fontSize: "0.8rem", color: "#047857", marginTop: 4 }}>Letzte Messung: {last.date}</div>
                 </div>
               ) : null}
+
+              {/* Wasseraustausch-Erinnerung */}
+              <WaterChangeCard
+                record={waterChange.record}
+                onSave={waterChange.saveRecord}
+                onReset={waterChange.resetDate}
+              />
 
               {/* Dosierrechner */}
               <DoseCalculator
