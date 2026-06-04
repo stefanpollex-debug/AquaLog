@@ -208,13 +208,13 @@ export default function App() {
           {/* ── Tab: Eintragen ───────────────────────────────────── */}
           {tab === "eingabe" && (
             <div>
-              {/* Datum */}
-              <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", display: "block", marginBottom: 6 }}>📅 Messdatum</label>
+              {/* Datum – kompakte Zeile */}
+              <div style={{ display: "flex", alignItems: "center", background: "white", borderRadius: 12, padding: "8px 14px", boxShadow: "0 2px 12px #0369a110", marginBottom: 10 }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#94a3b8", flexShrink: 0 }}>📅 Datum</span>
                 <input
                   type="date" value={form.date}
                   onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                  style={{ width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "9px 12px", fontSize: "1rem", boxSizing: "border-box" }}
+                  style={{ flex: 1, border: "none", background: "transparent", fontSize: "0.88rem", fontWeight: 700, color: "#1e293b", outline: "none", textAlign: "right" }}
                 />
               </div>
 
@@ -234,20 +234,15 @@ export default function App() {
                 </div>
               ))}
 
-              {/* Notiz */}
-              <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", display: "block", marginBottom: 6 }}>📝 Notiz (optional)</label>
+              {/* Notiz + Chemikalien – eine gemeinsame Karte */}
+              <div style={{ background: "white", borderRadius: 18, padding: 14, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
                 <textarea
                   value={form.note}
                   onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-                  placeholder="z.B. Wasser gewechselt, Chemikalien zugegeben…"
+                  placeholder="📝 Notiz (optional)"
                   rows={2}
-                  style={{ width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "9px 12px", fontSize: "0.9rem", resize: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "9px 12px", fontSize: "0.88rem", resize: "none", boxSizing: "border-box", marginBottom: 12 }}
                 />
-              </div>
-
-              {/* Chemikalien-Log */}
-              <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
                 <ChemLogInput value={chemicals} onChange={setChemicals} />
               </div>
 
@@ -341,41 +336,44 @@ export default function App() {
                 {showList && (
                   <div style={{ marginTop: 8 }}>
                     {entries.map((e) => (
-                      <div key={e.id} style={{ background: "white", borderRadius: 14, padding: "12px 14px", marginBottom: 8, boxShadow: "0 1px 6px #0369a10d" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b", marginBottom: 4 }}>
-                              {e.date}
-                              {/* Wetter-Icons bei Einträgen mit Wetterdaten */}
-                              {(e.outTemp != null || e.uvIndex != null) && (
-                                <span style={{ fontWeight: 400, fontSize: "0.72rem", color: "#94a3b8", marginLeft: 8 }}>
-                                  {e.outTemp != null && `🌡️${e.outTemp.toFixed(0)}°`}
-                                  {e.uvIndex != null && ` 🔆UV${e.uvIndex.toFixed(0)}`}
+                      <div key={e.id} style={{ background: "white", borderRadius: 12, padding: "9px 12px", marginBottom: 6, boxShadow: "0 1px 4px #0369a10d" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {/* Zeile 1: Datum + Wetter */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "#475569" }}>
+                                {new Date(e.date + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
+                              </span>
+                              {e.outTemp != null && (
+                                <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>🌡️{e.outTemp.toFixed(0)}°</span>
+                              )}
+                              {e.uvIndex != null && (
+                                <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>🔆{e.uvIndex.toFixed(0)}</span>
+                              )}
+                              {e.note && (
+                                <span style={{ fontSize: "0.68rem", color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }} title={e.note}>
+                                  · {e.note}
                                 </span>
                               )}
                             </div>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            {/* Zeile 2: Messwerte */}
+                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                               {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
-                                <span key={k} style={{ fontSize: "0.75rem" }}>
-                                  {LIMITS[k].label}: <b>{e[k].toFixed(1)}{LIMITS[k].unit}</b>{" "}
+                                <span key={k} style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 3 }}>
+                                  <b style={{ color: "#1e293b" }}>{e[k].toFixed(1)}{LIMITS[k].unit}</b>
                                   <StatusBadge status={getStatus(k, e[k])} />
                                 </span>
                               ))}
+                              {e.chemicals?.map(c => (
+                                <span key={c.product} style={{ fontSize: "0.65rem", background: "#f0fdf4", color: "#15803d", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>
+                                  🧪 {c.amount}{c.unit}
+                                </span>
+                              ))}
                             </div>
-                            {e.chemicals && e.chemicals.length > 0 && (
-                              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
-                                {e.chemicals.map(c => (
-                                  <span key={c.product} style={{ fontSize: "0.68rem", background: "#f0fdf4", color: "#15803d", borderRadius: 5, padding: "2px 6px", fontWeight: 600 }}>
-                                    🧪 {c.amount}{c.unit}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            {e.note && <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 4, fontStyle: "italic" }}>📝 {e.note}</div>}
                           </div>
                           <button
                             onClick={() => setDeleteTarget(e)}
-                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", color: "#cbd5e1", padding: "0 0 0 8px" }}
+                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem", color: "#e2e8f0", padding: "0 0 0 8px", flexShrink: 0 }}
                           >🗑️</button>
                         </div>
                       </div>
