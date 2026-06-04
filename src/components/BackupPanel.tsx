@@ -81,7 +81,7 @@ export function BackupPanel({
       const newEntries  = (backup.entries ?? []).filter(e => !existingIds.has(e.id));
       const filterIds   = new Set(filterLog.map(e => e.id));
       const newFilter   = (backup.filterLog ?? []).filter(e => !filterIds.has(e.id));
-      const hasNewWC    = !!backup.waterChange && (!waterChange || backup.waterChange.date !== waterChange.date);
+      const hasNewWC    = !!backup.waterChange && (backup.waterChange.additions?.length ?? 0) > (waterChange?.additions?.length ?? 0);
       const hasNewProf  = !!backup.settings?.profile;
       setPreview({ backup, newEntries, newFilterEntries: newFilter, hasNewWaterChange: hasNewWC, hasNewProfile: hasNewProf });
     } catch (err) {

@@ -31,7 +31,7 @@ import { FilterCareCard }    from "./components/FilterCareCard";
 import { type PoolEntry, type ChemicalAddition } from "./hooks/usePoolEntries";
 import { useWaterChange }    from "./hooks/useWaterChange";
 import { useFilterLog }      from "./hooks/useFilterLog";
-import { daysUntilNextChange } from "./utils/waterChange";
+import { daysSinceLastAddition, getWaterStatus } from "./utils/waterChange";
 import { daysSinceEntry }    from "./utils/filterLog";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
@@ -98,7 +98,10 @@ export default function App() {
   const daysSinceLast = last ? daysSince(last.date) : null;
   const staleWarn     = daysSinceLast !== null && daysSinceLast >= STALE_DAYS;
   const volumeM3         = profile.volumeLiters / 1000;
-  const waterChangeDue   = waterChange.record ? daysUntilNextChange(waterChange.record) <= 0 : false;
+  const waterChangeDue = getWaterStatus(
+    daysSinceLastAddition(waterChange.record),
+    waterChange.record.intervalDays
+  ) === "danger";
 
   // Push-Notification: Filterpflege
   useEffect(() => {
@@ -121,21 +124,19 @@ export default function App() {
     }
   }, [filterLog.lastClean, filterLog.lastReplace, filterLog.settings]);
 
-  // Push-Notification für Wasseraustausch (beim App-Öffnen, max. 1× pro Tag)
+  // Push-Notification für Wasserwechsel (beim App-Öffnen, max. 1× pro Tag)
   useEffect(() => {
-    if (!waterChange.record) return;
     if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const daysLeft = daysUntilNextChange(waterChange.record);
-    if (daysLeft > 14) return;
-    const today       = new Date().toISOString().slice(0, 10);
-    const lastNotified = localStorage.getItem("waterChangeNotified");
-    if (lastNotified === today) return;
-    const body = daysLeft <= 0
-      ? `🚿 Heute Wasseraustausch empfohlen — ${profile.name} ${profile.volumeLiters}L`
-      : `⏳ Wasseraustausch in ${daysLeft} Tag${daysLeft === 1 ? "" : "en"} fällig`;
-    new Notification("Pool Bericht", { body, icon: "/favicon.svg" });
+    const daysSince = daysSinceLastAddition(waterChange.record);
+    if (daysSince === null || daysSince < waterChange.record.intervalDays) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem("waterChangeNotified") === today) return;
+    new Notification("Pool Bericht", {
+      body: `💧 Teilwasserwechsel fällig — letzter Eintrag vor ${daysSince} Tagen`,
+      icon: "/favicon.svg",
+    });
     localStorage.setItem("waterChangeNotified", today);
-  }, [waterChange.record, profile]);
+  }, [waterChange.record]);
 
   const poolTips = last
     ? (["cl", "ph", "temp"] as FieldKey[])
@@ -228,8 +229,8 @@ export default function App() {
 
         {/* Wasseraustausch fällig */}
         {waterChangeDue && (
-          <div style={{ background: "#b91c1c", color: "white", padding: "10px 20px", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}>
-            🚿 Wasseraustausch fällig – bitte jetzt wechseln!
+          <div style={{ background: "#1d4ed8", color: "white", padding: "10px 20px", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}>
+            💧 Teilwasserwechsel fällig – Frischwasser zugeben!
           </div>
         )}
 
@@ -495,11 +496,14 @@ export default function App() {
                 onSettings={filterLog.setSettings}
               />
 
-              {/* Wasseraustausch-Erinnerung */}
+              {/* Teilwasserwechsel */}
               <WaterChangeCard
                 record={waterChange.record}
-                onSave={waterChange.saveRecord}
-                onReset={waterChange.resetDate}
+                onAdd={waterChange.addEntry}
+                onSaveRecord={waterChange.saveRecord}
+                poolVolume={profile.volumeLiters}
+                lastCl={last?.cl}
+                lastPh={last?.ph}
               />
 
               {/* Dosierrechner */}
