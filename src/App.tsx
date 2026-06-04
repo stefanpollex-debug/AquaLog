@@ -27,9 +27,12 @@ import { WeatherWidget }     from "./components/WeatherWidget";
 import { TrendsView }        from "./components/TrendsView";
 import { ChemLogInput }      from "./components/ChemLogInput";
 import { WaterChangeCard }   from "./components/WaterChangeCard";
+import { FilterCareCard }    from "./components/FilterCareCard";
 import { type PoolEntry, type ChemicalAddition } from "./hooks/usePoolEntries";
 import { useWaterChange }    from "./hooks/useWaterChange";
+import { useFilterLog }      from "./hooks/useFilterLog";
 import { daysUntilNextChange } from "./utils/waterChange";
+import { daysSinceEntry }    from "./utils/filterLog";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
 
@@ -39,9 +42,10 @@ const FIELD_LABELS: Record<FieldKey, string> = {
 };
 
 export default function App() {
-  const { entries, loaded, addEntry, deleteEntry } = usePoolEntries();
+  const { entries, loaded, addEntry, deleteEntry, bulkImport: bulkImportEntries } = usePoolEntries();
   const { profile, saveProfile }                   = usePoolProfile();
   const waterChange = useWaterChange();
+  const filterLog   = useFilterLog();
   const { weather, loading: wxLoading, minutesAgo } = useWeather();
 
   const [form, setForm]       = useState({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
@@ -95,6 +99,27 @@ export default function App() {
   const staleWarn     = daysSinceLast !== null && daysSinceLast >= STALE_DAYS;
   const volumeM3         = profile.volumeLiters / 1000;
   const waterChangeDue   = waterChange.record ? daysUntilNextChange(waterChange.record) <= 0 : false;
+
+  // Push-Notification: Filterpflege
+  useEffect(() => {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const today = new Date().toISOString().slice(0, 10);
+    const notify = (storageKey: string, body: string) => {
+      if (localStorage.getItem(storageKey) === today) return;
+      new Notification("Pool Bericht", { body, icon: "/favicon.svg" });
+      localStorage.setItem(storageKey, today);
+    };
+    if (filterLog.lastClean) {
+      const d = daysSinceEntry(filterLog.lastClean);
+      if (d >= filterLog.settings.cleanIntervalDays)
+        notify("filterCleanNotified", `🧽 Filterreinigung fällig — letzter Termin vor ${d} Tagen`);
+    }
+    if (filterLog.lastReplace) {
+      const d = daysSinceEntry(filterLog.lastReplace);
+      if (d >= filterLog.settings.replaceIntervalDays)
+        notify("filterReplaceNotified", `🔄 Filterwechsel empfohlen — letzter Wechsel vor ${d} Tagen`);
+    }
+  }, [filterLog.lastClean, filterLog.lastReplace, filterLog.settings]);
 
   // Push-Notification für Wasseraustausch (beim App-Öffnen, max. 1× pro Tag)
   useEffect(() => {
@@ -460,6 +485,16 @@ export default function App() {
                 </div>
               ) : null}
 
+              {/* Filterpflege */}
+              <FilterCareCard
+                log={filterLog.log}
+                settings={filterLog.settings}
+                lastClean={filterLog.lastClean}
+                lastReplace={filterLog.lastReplace}
+                onAdd={filterLog.addEntry}
+                onSettings={filterLog.setSettings}
+              />
+
               {/* Wasseraustausch-Erinnerung */}
               <WaterChangeCard
                 record={waterChange.record}
@@ -510,6 +545,13 @@ export default function App() {
           profile={profile}
           onSave={saveProfile}
           onClose={() => setShowProfile(false)}
+          entries={entries}
+          filterLog={filterLog.log}
+          waterChange={waterChange.record}
+          onImportEntries={bulkImportEntries}
+          onImportFilterLog={filterLog.bulkImport}
+          onImportWaterChange={waterChange.saveRecord}
+          onImportProfile={saveProfile}
         />
       )}
     </div>

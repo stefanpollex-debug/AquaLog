@@ -50,5 +50,15 @@ export function usePoolEntries() {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
-  return { entries, loaded, addEntry, deleteEntry };
+  const bulkImport = (toAdd: PoolEntry[]) =>
+    setEntries(prev => {
+      const existingIds = new Set(prev.map(e => e.id));
+      const novel = toAdd.filter(e => !existingIds.has(e.id));
+      if (!novel.length) return prev;
+      return [...novel, ...prev].sort((a, b) =>
+        b.date.localeCompare(a.date) || b.id - a.id
+      );
+    });
+
+  return { entries, loaded, addEntry, deleteEntry, bulkImport };
 }

@@ -1,10 +1,22 @@
 import { useState, useEffect } from "react";
-import { type PoolProfile } from "../hooks/usePoolProfile";
+import { type PoolProfile }       from "../hooks/usePoolProfile";
+import { type PoolEntry }         from "../hooks/usePoolEntries";
+import { type FilterEntry }       from "../utils/filterLog";
+import { type WaterChangeRecord } from "../utils/waterChange";
+import { BackupPanel }            from "./BackupPanel";
 
 interface Props {
-  profile: PoolProfile;
-  onSave: (p: PoolProfile) => void;
-  onClose: () => void;
+  profile:  PoolProfile;
+  onSave:   (p: PoolProfile) => void;
+  onClose:  () => void;
+  // Backup
+  entries:             PoolEntry[];
+  filterLog:           FilterEntry[];
+  waterChange:         WaterChangeRecord | null;
+  onImportEntries:     (entries: PoolEntry[])   => void;
+  onImportFilterLog:   (log: FilterEntry[])     => void;
+  onImportWaterChange: (r: WaterChangeRecord)   => void;
+  onImportProfile:     (p: PoolProfile)         => void;
 }
 
 const POOL_TYPES   = ["Frame Pool", "Stahlwandpool", "Einbaupool", "Whirlpool / Spa", "Aufstellpool"];
@@ -13,7 +25,11 @@ const SANITIZERS   = ["Chlor (Granulat)", "Salzelektrolyse", "Aktivsauerstoff", 
 const LOCATIONS    = ["Vollsonnig (>6h)", "Halbschattig (3–6h)", "Schattig (<3h)"];
 const USAGE        = ["Täglich", "2–3× pro Woche", "Nur am Wochenende", "Gelegentlich"];
 
-export function PoolProfileSheet({ profile, onSave, onClose }: Props) {
+export function PoolProfileSheet({
+  profile, onSave, onClose,
+  entries, filterLog, waterChange,
+  onImportEntries, onImportFilterLog, onImportWaterChange, onImportProfile,
+}: Props) {
   const [form, setForm] = useState<PoolProfile>(profile);
 
   useEffect(() => { setForm(profile); }, [profile]);
@@ -103,6 +119,20 @@ export function PoolProfileSheet({ profile, onSave, onClose }: Props) {
         >
           ✓ Profil speichern
         </button>
+
+        {/* ── Backup & Export ───────────────────────────────── */}
+        <div style={{ marginTop: 28, borderTop: "1px solid #e2e8f0", paddingTop: 20 }}>
+          <BackupPanel
+            entries={entries}
+            filterLog={filterLog}
+            waterChange={waterChange}
+            profile={form}
+            onImportEntries={onImportEntries}
+            onImportFilterLog={onImportFilterLog}
+            onImportWaterChange={onImportWaterChange}
+            onImportProfile={(p) => { onImportProfile(p); setForm(p); }}
+          />
+        </div>
       </div>
     </>
   );
