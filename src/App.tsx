@@ -227,17 +227,28 @@ export default function App() {
           )}
         </div>
 
-        {/* Stale warning */}
-        {staleWarn && (
-          <div style={{ background: "#ef4444", color: "white", padding: "10px 20px", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}>
-            ⚠️ Letzte Messung vor {daysSinceLast} Tagen – bitte jetzt messen!
-          </div>
-        )}
-
-        {/* Wasseraustausch fällig */}
-        {waterChangeDue && (
-          <div style={{ background: "#1d4ed8", color: "white", padding: "10px 20px", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}>
-            💧 Teilwasserwechsel fällig – Frischwasser zugeben!
+        {/* Alert-Zone: kombiniert wenn beide aktiv */}
+        {(staleWarn || waterChangeDue) && (
+          <div style={{ background: staleWarn ? "#dc2626" : "#1d4ed8", color: "white" }}>
+            {staleWarn && (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: waterChangeDue ? "8px 20px 5px" : "10px 20px",
+                fontWeight: 700, fontSize: "0.85rem",
+              }}>
+                ⚠️ Letzte Messung vor {daysSinceLast} Tagen – bitte jetzt messen!
+              </div>
+            )}
+            {waterChangeDue && (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: staleWarn ? "5px 20px 8px" : "10px 20px",
+                fontWeight: 700, fontSize: "0.85rem",
+                background: staleWarn ? "rgba(0,0,0,0.18)" : undefined,
+              }}>
+                💧 Teilwasserwechsel fällig – Frischwasser zugeben!
+              </div>
+            )}
           </div>
         )}
 
