@@ -1,7 +1,7 @@
 export const LIMITS = {
-  cl:   { min: 3.0, max: 5.0, step: 0.1,  sliderMin: 0,   sliderMax: 10,  unit: "mg/l", label: "Chlor (Cl)",       color: "#0ea5e9" },
+  cl:   { min: 0.5, max: 1.5, step: 0.1,  sliderMin: 0,   sliderMax: 5,   unit: "mg/l", label: "Chlor (Cl)",       color: "#0ea5e9" },
   ph:   { min: 7.2, max: 7.6, step: 0.05, sliderMin: 6.5, sliderMax: 8.5, unit: "",     label: "pH-Wert",          color: "#8b5cf6" },
-  temp: { min: 35,  max: 40,  step: 0.5,  sliderMin: 10,  sliderMax: 45,  unit: "°C",   label: "Temperatur",       color: "#f97316" },
+  temp: { min: 20,  max: 28,  step: 0.5,  sliderMin: 10,  sliderMax: 35,  unit: "°C",   label: "Temperatur",       color: "#f97316" },
   kh:   { min: 80,  max: 120, step: 5,    sliderMin: 20,  sliderMax: 250, unit: "mg/l", label: "Alkalinität (KH)", color: "#10b981" },
   gh:   { min: 200, max: 400, step: 10,   sliderMin: 50,  sliderMax: 600, unit: "mg/l", label: "Gesamthärte (GH)", color: "#f472b6" },
 } as const;
@@ -11,7 +11,7 @@ export type FieldKey = keyof typeof LIMITS;
 export const POOL = {
   name: "Home Deluxe Spa DROP",
   volume: 0.95,
-  type: "spa",
+  type: "pool",
 } as const;
 
 export const FIRST_ENTRY = {
@@ -24,7 +24,7 @@ export const FIRST_ENTRY = {
   id: 1748217600000,
 };
 
-export const DEFAULT_VALUES = { cl: 3.0, ph: 7.4, temp: 38, kh: 100, gh: 250 };
+export const DEFAULT_VALUES = { cl: 1.0, ph: 7.4, temp: 24, kh: 100, gh: 250 };
 
-// Für Whirlpool/Spa mit hoher Wassertemperatur: alle 2–3 Tage messen
-export const STALE_DAYS = 3;
+// Kühlwasser-Pool bei 23–25°C: alle 5–6 Tage messen reicht
+export const STALE_DAYS = 6;

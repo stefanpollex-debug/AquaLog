@@ -20,8 +20,8 @@ function WaitBadge({ text }: { text: string }) {
 export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, currentGh }: Props) {
   const volumeM3 = volumeLiters / 1000;
 
-  const [clCurrent, setClCurrent] = useState(currentCl ?? 2.0);
-  const [clTarget,  setClTarget]  = useState(4.0);
+  const [clCurrent, setClCurrent] = useState(currentCl ?? 0.3);
+  const [clTarget,  setClTarget]  = useState(1.0);
   const [phCurrent, setPhCurrent] = useState(currentPh ?? 7.5);
   const [phTarget,  setPhTarget]  = useState(7.4);
   const [khCurrent, setKhCurrent] = useState(currentKh ?? 60);
@@ -91,8 +91,8 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
         <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#15803d", marginBottom: 8 }}>
           🟢 Schnellkorrektur — Chlor Granulat
         </div>
-        <SliderRow label="Aktuell" value={clCurrent} onChange={setClCurrent} min={0}   max={10}  step={0.1} unit=" mg/l" />
-        <SliderRow label="Ziel"    value={clTarget}  onChange={setClTarget}  min={0}   max={10}  step={0.1} unit=" mg/l" />
+        <SliderRow label="Aktuell" value={clCurrent} onChange={setClCurrent} min={0}   max={5}   step={0.1} unit=" mg/l" />
+        <SliderRow label="Ziel"    value={clTarget}  onChange={setClTarget}  min={0}   max={5}   step={0.1} unit=" mg/l" />
         {clDelta < -0.05 ? (
           <div style={{ marginTop: 6, background: "#fef9c3", borderRadius: 8, padding: "7px 10px", fontSize: "0.75rem", color: "#713f12" }}>
             ⏳ Abbauwarten — Abdeckung öffnen, Spa 24–48 Std. lüften
@@ -104,7 +104,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
           </>
         )}
         <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
-          Zielbereich Spa/Whirlpool: 3–5 mg/l · Immer pH zuerst korrigieren
+          Zielbereich Kühlwasser-Pool: 0,5–1,5 mg/l · Immer pH zuerst korrigieren
         </div>
       </div>
 
@@ -118,11 +118,11 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
         </div>
         <div style={{ background: "#dbeafe", borderRadius: 8, padding: "8px 12px" }}>
           <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1d4ed8" }}>1 Tab</span>
-          <span style={{ fontSize: "0.72rem", color: "#475569", marginLeft: 6 }}>Steinbach Total Blue 20g pro Woche</span>
+          <span style={{ fontSize: "0.72rem", color: "#475569", marginLeft: 6 }}>Steinbach Total Blue 20g alle 1–2 Wochen</span>
         </div>
         <WaitBadge text="Kein Badeverbot, aber 30 Min. nach dem Einlegen abwarten" />
         <div style={{ marginTop: 8, background: "#fef3c7", borderRadius: 8, padding: "8px 10px", fontSize: "0.68rem", color: "#92400e", lineHeight: 1.5 }}>
-          ⚠️ Trichlor-Tabs enthalten Isocyanursäure (CYA). Im Spa reichert sich CYA schnell an und reduziert die Chlorwirkung (Chlorlock). Alle 3 Monate Teilwasserwechsel ist besonders wichtig.
+          ⚠️ Trichlor-Tabs enthalten Isocyanursäure (CYA). Bei kühlem Wasser ist die Chlorstabilität höher — Cl regelmäßig messen und Einlegeintervall anpassen. Alle 3–4 Monate Teilwasserwechsel empfohlen.
         </div>
       </div>
 

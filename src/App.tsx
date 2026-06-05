@@ -36,7 +36,7 @@ import { daysSinceEntry }    from "./utils/filterLog";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
 
-const DEFAULT_VALUES = { cl: 3.0, ph: 7.4, temp: 38, kh: 100, gh: 250 };
+const DEFAULT_VALUES = { cl: 1.0, ph: 7.4, temp: 24, kh: 100, gh: 250 };
 const FIELD_LABELS: Record<FieldKey, string> = {
   cl: "Chlor (Cl)", ph: "pH-Wert", temp: "Temperatur", kh: "Alkalinität (KH)", gh: "Gesamthärte (GH)",
 };
