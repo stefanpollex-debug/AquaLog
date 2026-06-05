@@ -188,14 +188,21 @@ export default function App() {
 
           {/* Pool-Werte */}
           {last && (
-            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-              {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
-                <div key={k} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px", fontSize: "0.75rem" }}>
-                  <span style={{ opacity: 0.8 }}>{LIMITS[k].label}: </span>
-                  <b>{last[k].toFixed(1)}{LIMITS[k].unit}</b>
-                  <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, last[k])} /></span>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", opacity: staleWarn ? 0.55 : 1 }}>
+                {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
+                  <div key={k} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px", fontSize: "0.75rem" }}>
+                    <span style={{ opacity: 0.8 }}>{LIMITS[k].label}: </span>
+                    <b>{last[k].toFixed(1)}{LIMITS[k].unit}</b>
+                    <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, last[k])} /></span>
+                  </div>
+                ))}
+              </div>
+              {staleWarn && (
+                <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.55)", marginTop: 5, fontStyle: "italic" }}>
+                  ⏱ Messung vor {daysSinceLast} Tagen – Werte möglicherweise veraltet
                 </div>
-              ))}
+              )}
             </div>
           )}
 
