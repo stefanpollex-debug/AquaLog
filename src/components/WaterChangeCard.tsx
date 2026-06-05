@@ -25,7 +25,7 @@ export function WaterChangeCard({ record, onAdd, onSaveRecord, poolVolume, lastC
   const [litersInput, setLitersInput] = useState<string>("");
   const [noteInput,   setNoteInput]   = useState("");
   const [saved,       setSaved]       = useState(false);
-  const [notif,       setNotif]       = useState(notifState);
+  const [notif,       setNotif]       = useState(notifState());
 
   const liters     = parseFloat(litersInput) || 0;
   const daysSince  = daysSinceLastAddition(record);

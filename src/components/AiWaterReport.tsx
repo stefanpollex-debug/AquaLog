@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { type PoolProfile } from "../hooks/usePoolProfile";
 import { getStatus } from "../utils/status";
@@ -16,6 +16,7 @@ export function AiWaterReport({ last, profile, daysSinceLast }: Props) {
   const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const analyse = async () => {
     if (!last) return;
@@ -35,15 +36,17 @@ export function AiWaterReport({ last, profile, daysSinceLast }: Props) {
       `Aktueller Wasserstatus:\n${statusLines}` +
       (last.note ? `\n\nNotiz: ${last.note}` : "");
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let timedOut = false;
+    const timeoutId = setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
+
     try {
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string;
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/anthropic", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
@@ -58,6 +61,7 @@ Kein Markdown, keine Listen – fließender Text.`,
         }),
       });
 
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error?.message ?? `HTTP ${res.status}`);
@@ -66,8 +70,16 @@ Kein Markdown, keine Listen – fließender Text.`,
       const text = (data.content?.find((b: { type: string }) => b.type === "text") as { text: string } | undefined)?.text ?? "";
       setReport(text.trim());
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (err instanceof DOMException && err.name === "AbortError") {
+        if (timedOut) {
+          setError("Zeitüberschreitung – bitte erneut versuchen.");
+        }
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
     } finally {
+      abortRef.current = null;
       setLoading(false);
     }
   };

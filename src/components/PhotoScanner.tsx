@@ -41,16 +41,14 @@ export function PhotoScanner({ onResult }: Props) {
       setAi(null);
       const controller = new AbortController();
       abortRef.current = controller;
+      let timedOut = false;
+      const timeoutId = setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
       try {
-        const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string;
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
+        const res = await fetch("/api/anthropic", {
           method: "POST",
           signal: controller.signal,
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
           },
           body: JSON.stringify({
             model: "claude-sonnet-4-6",
@@ -76,6 +74,7 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
             }],
           }),
         });
+        clearTimeout(timeoutId);
         const data   = await res.json();
         if (!res.ok) {
           const apiErr = data?.error?.message ?? data?.error?.type ?? `HTTP ${res.status}`;
@@ -89,7 +88,14 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
         setAi(parsed);
         setState("result");
       } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
+        clearTimeout(timeoutId);
+        if (err instanceof DOMException && err.name === "AbortError") {
+          if (timedOut) {
+            setState("error");
+            setErrMsg("Zeitüberschreitung – bitte erneut versuchen.");
+          }
+          return;
+        }
         setState("error");
         setErrMsg(`Fehler: ${err instanceof Error ? err.message : String(err)}`);
       }
