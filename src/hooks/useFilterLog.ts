@@ -43,8 +43,11 @@ export function useFilterLog() {
       );
     });
 
+  const deleteEntry = (id: number) =>
+    setLog(prev => prev.filter(e => e.id !== id));
+
   const lastClean   = log.find(e => e.type === "clean");
   const lastReplace = log.find(e => e.type === "replace");
 
-  return { log, settings, loaded, addEntry, bulkImport, setSettings, lastClean, lastReplace };
+  return { log, settings, loaded, addEntry, deleteEntry, bulkImport, setSettings, lastClean, lastReplace };
 }

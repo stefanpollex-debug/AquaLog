@@ -8,6 +8,7 @@ import {
 interface Props {
   record:       WaterChangeRecord;
   onAdd:        (litersAdded: number, note?: string) => void;
+  onDelete:     (id: number) => void;
   onSaveRecord: (r: WaterChangeRecord) => void;
   poolVolume:   number;    // Liter
   lastCl?:      number;    // aktueller Cl-Messwert für Verdünnungsberechnung
@@ -21,7 +22,7 @@ function notifState(): "idle" | "granted" | "denied" {
   return "idle";
 }
 
-export function WaterChangeCard({ record, onAdd, onSaveRecord, poolVolume, lastCl, lastPh }: Props) {
+export function WaterChangeCard({ record, onAdd, onDelete, onSaveRecord, poolVolume, lastCl, lastPh }: Props) {
   const [litersInput, setLitersInput] = useState<string>("");
   const [noteInput,   setNoteInput]   = useState("");
   const [saved,       setSaved]       = useState(false);
@@ -262,6 +263,10 @@ export function WaterChangeCard({ record, onAdd, onSaveRecord, poolVolume, lastC
                   · {a.note}
                 </span>
               )}
+              <button
+                onClick={() => onDelete(a.id)}
+                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#e2e8f0", fontSize: "0.85rem", padding: "0 0 0 4px", flexShrink: 0 }}
+              >🗑️</button>
             </div>
           ))}
         </div>

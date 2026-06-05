@@ -40,7 +40,10 @@ export function useWaterChange() {
     setRecord(prev => ({ ...prev, additions: [addition, ...prev.additions] }));
   };
 
+  const deleteEntry = (id: number) =>
+    setRecord(prev => ({ ...prev, additions: prev.additions.filter(a => a.id !== id) }));
+
   const saveRecord = (r: WaterChangeRecord) => setRecord(r);
 
-  return { record, loaded, addEntry, saveRecord };
+  return { record, loaded, addEntry, deleteEntry, saveRecord };
 }

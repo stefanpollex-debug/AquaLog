@@ -513,6 +513,7 @@ export default function App() {
                 lastClean={filterLog.lastClean}
                 lastReplace={filterLog.lastReplace}
                 onAdd={filterLog.addEntry}
+                onDelete={filterLog.deleteEntry}
                 onSettings={filterLog.setSettings}
               />
 
@@ -520,6 +521,7 @@ export default function App() {
               <WaterChangeCard
                 record={waterChange.record}
                 onAdd={waterChange.addEntry}
+                onDelete={waterChange.deleteEntry}
                 onSaveRecord={waterChange.saveRecord}
                 poolVolume={profile.volumeLiters}
                 lastCl={last?.cl}

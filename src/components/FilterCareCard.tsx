@@ -11,6 +11,7 @@ interface Props {
   lastClean?:   FilterEntry;
   lastReplace?: FilterEntry;
   onAdd:        (type: FilterEntry["type"]) => void;
+  onDelete:     (id: number) => void;
   onSettings:   (s: FilterSettings) => void;
 }
 
@@ -58,7 +59,7 @@ function MiniCard({ entry, intervalDays, icon, label, onAdd }: {
   );
 }
 
-export function FilterCareCard({ log, settings, lastClean, lastReplace, onAdd, onSettings }: Props) {
+export function FilterCareCard({ log, settings, lastClean, lastReplace, onAdd, onDelete, onSettings }: Props) {
   const [showSettings, setShowSettings] = useState(false);
   const recent = log.slice(0, 5);
 
@@ -150,6 +151,10 @@ export function FilterCareCard({ log, settings, lastClean, lastReplace, onAdd, o
                   · {e.note}
                 </span>
               )}
+              <button
+                onClick={() => onDelete(e.id)}
+                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#e2e8f0", fontSize: "0.85rem", padding: "0 0 0 4px", flexShrink: 0 }}
+              >🗑️</button>
             </div>
           ))}
         </div>
