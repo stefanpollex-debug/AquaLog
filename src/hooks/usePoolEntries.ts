@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { get, set } from "idb-keyval";
 import { FIRST_ENTRY } from "../utils/constants";
 
-export type ChemProduct = "chlor_granulat" | "total_blue" | "ph_plus" | "ph_minus";
-export type ChemUnit    = "g" | "Tab";
+export type ChemProduct = "chlor_granulat" | "total_blue" | "ph_plus" | "ph_minus" | "algenmittel" | "klaermittel";
+export type ChemUnit    = "g" | "Tab" | "ml";
 
 export interface ChemicalAddition {
   product: ChemProduct;

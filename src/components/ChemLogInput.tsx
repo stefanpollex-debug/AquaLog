@@ -59,6 +59,28 @@ export const CHEM_PRODUCTS: ProductDef[] = [
     step:          5,
     color:         "#be123c",
   },
+  {
+    id:            "algenmittel",
+    label:         "Algenmittel (z.B. Desalgin® JET)",
+    shortLabel:    "Algenmittel",
+    emoji:         "🌿",
+    unit:          "ml",
+    defaultAmount: 2,
+    step:          1,
+    color:         "#16a34a",
+    hint:          "Vorbeugend alle 1–2 Wochen",
+  },
+  {
+    id:            "klaermittel",
+    label:         "Klärmittel / Flockungsmittel",
+    shortLabel:    "Klärmittel",
+    emoji:         "💎",
+    unit:          "ml",
+    defaultAmount: 2,
+    step:          1,
+    color:         "#0369a1",
+    hint:          "Bei trübem Wasser",
+  },
 ];
 
 export function ChemLogInput({ value, onChange }: Props) {
@@ -84,7 +106,7 @@ export function ChemLogInput({ value, onChange }: Props) {
         🧪 Chemikalie zugegeben? <span style={{ fontWeight: 400 }}>(optional)</span>
       </div>
 
-      {/* 2 × 2 Toggle-Grid */}
+      {/* 2 × N Toggle-Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {CHEM_PRODUCTS.map(p => {
           const active = isActive(p.id);

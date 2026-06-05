@@ -61,6 +61,6 @@ export function getTipWithDose(
     return `⚠️ Gesamthärte zu niedrig (${currentValue} mg/l): Aggressives Wasser greift Gehäuse, Heizung und Dichtungen an. Calciumchlorid-Granulat zugeben: Für ${L} L ca. ${dose}g einrühren. ⏰ Pumpe 30 Min. → 1 Std. Badepause → GH + pH nachmessen.`;
   }
   if (key === "gh" && status === "high")
-    return `ℹ️ Gesamthärte zu hoch (${currentValue} mg/l): Kalkausfällungen und Düsenverstopfung möglich. Teilwasserwechsel empfohlen.`;
+    return `ℹ️ Gesamthärte zu hoch (${currentValue} mg/l): Kalkablagerungen an Düsen und Gehäuse möglich. Teilwasserwechsel empfohlen (kalkhaltiges Leitungswasser mit enthärtetem Wasser mischen).`;
   return null;
 }

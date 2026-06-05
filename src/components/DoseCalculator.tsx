@@ -26,8 +26,8 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
   const [phTarget,  setPhTarget]  = useState(7.4);
   const [khCurrent, setKhCurrent] = useState(currentKh ?? 60);
   const [khTarget,  setKhTarget]  = useState(100);
-  const [ghCurrent, setGhCurrent] = useState(currentGh ?? 150);
-  const [ghTarget,  setGhTarget]  = useState(300);
+  const [ghCurrent, setGhCurrent] = useState(currentGh ?? 100);
+  const [ghTarget,  setGhTarget]  = useState(150);
 
   const clDelta     = clTarget - clCurrent;
   const phDelta     = phTarget - phCurrent;
@@ -42,7 +42,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
 
   const ghDelta   = ghCurrent < ghTarget - 10 ? (ghTarget - ghCurrent) / 10 : 0;
   const ghDose    = ghDelta > 0 ? calcDose("gh_plus", ghDelta, volumeM3) : 0;
-  const ghTooHigh = ghCurrent > 450;
+  const ghTooHigh = ghCurrent > 250;
 
   function SliderRow({
     label, value, onChange, min, max, step, unit,
@@ -189,8 +189,8 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
         <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#9d174d", marginBottom: 8 }}>
           🩷 Gesamthärte (GH)
         </div>
-        <SliderRow label="Aktuell" value={ghCurrent} onChange={setGhCurrent} min={50}  max={600} step={10} unit=" mg/l" />
-        <SliderRow label="Ziel"    value={ghTarget}  onChange={setGhTarget}  min={200} max={400} step={10} unit=" mg/l" />
+        <SliderRow label="Aktuell" value={ghCurrent} onChange={setGhCurrent} min={50}  max={500} step={10} unit=" mg/l" />
+        <SliderRow label="Ziel"    value={ghTarget}  onChange={setGhTarget}  min={100} max={200} step={10} unit=" mg/l" />
         {ghTooHigh ? (
           <div style={{ marginTop: 6, background: "#fef9c3", borderRadius: 8, padding: "7px 10px", fontSize: "0.75rem", color: "#713f12" }}>
             ⚠️ GH zu hoch: Kalkausfällungen möglich. Teilwasserwechsel empfohlen.
@@ -209,7 +209,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
           </div>
         )}
         <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
-          Zielbereich Spa: 200–400 mg/l · Zu weiches Wasser greift Heizung und Dichtungen an
+          Zielbereich Pool: 100–200 mg/l · Zu weiches Wasser greift Heizung und Dichtungen an
         </div>
       </div>
 

@@ -3,7 +3,7 @@ export const LIMITS = {
   ph:   { min: 7.2, max: 7.6, step: 0.05, sliderMin: 6.5, sliderMax: 8.5, unit: "",     label: "pH-Wert",          color: "#8b5cf6" },
   temp: { min: 20,  max: 28,  step: 0.5,  sliderMin: 10,  sliderMax: 35,  unit: "°C",   label: "Temperatur",       color: "#f97316" },
   kh:   { min: 80,  max: 120, step: 5,    sliderMin: 20,  sliderMax: 250, unit: "mg/l", label: "Alkalinität (KH)", color: "#10b981" },
-  gh:   { min: 200, max: 400, step: 10,   sliderMin: 50,  sliderMax: 600, unit: "mg/l", label: "Gesamthärte (GH)", color: "#f472b6" },
+  gh:   { min: 100, max: 200, step: 10,   sliderMin: 50,  sliderMax: 500, unit: "mg/l", label: "Gesamthärte (GH)", color: "#f472b6" },
 } as const;
 
 export type FieldKey = keyof typeof LIMITS;
@@ -24,7 +24,7 @@ export const FIRST_ENTRY = {
   id: 1748217600000,
 };
 
-export const DEFAULT_VALUES = { cl: 1.0, ph: 7.4, temp: 24, kh: 100, gh: 250 };
+export const DEFAULT_VALUES = { cl: 1.0, ph: 7.4, temp: 24, kh: 100, gh: 150 };
 
 // Kühlwasser-Pool bei 23–25°C: alle 5–6 Tage messen reicht
 export const STALE_DAYS = 6;

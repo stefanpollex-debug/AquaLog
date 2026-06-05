@@ -27,6 +27,7 @@ import { WeatherWidget }     from "./components/WeatherWidget";
 import { TrendsView }        from "./components/TrendsView";
 import { ChemLogInput }      from "./components/ChemLogInput";
 import { WaterChangeCard }   from "./components/WaterChangeCard";
+import { ProblemDiagnose }   from "./components/ProblemDiagnose";
 import { FilterCareCard }    from "./components/FilterCareCard";
 import { type PoolEntry, type ChemicalAddition } from "./hooks/usePoolEntries";
 import { useWaterChange }    from "./hooks/useWaterChange";
@@ -36,7 +37,7 @@ import { daysSinceEntry }    from "./utils/filterLog";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
 
-const DEFAULT_VALUES = { cl: 1.0, ph: 7.4, temp: 24, kh: 100, gh: 250 };
+const DEFAULT_VALUES = { cl: 1.0, ph: 7.4, temp: 24, kh: 100, gh: 150 };
 const FIELD_LABELS: Record<FieldKey, string> = {
   cl: "Chlor (Cl)", ph: "pH-Wert", temp: "Temperatur", kh: "Alkalinität (KH)", gh: "Gesamthärte (GH)",
 };
@@ -153,6 +154,11 @@ export default function App() {
     : [];
 
   const weatherHints = weather ? getWeatherPoolHints(weather) : [];
+
+  // Algenvorbeugung: letzter Eintrag mit Algenmittel
+  const lastAlgenEntry = entries.find(e => e.chemicals?.some(c => c.product === "algenmittel"));
+  const daysSinceAlgen = lastAlgenEntry ? daysSince(lastAlgenEntry.date) : null;
+  const algenDue = daysSinceAlgen === null || daysSinceAlgen >= 14;
 
   if (!loaded) return (
     <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -523,6 +529,42 @@ export default function App() {
                   </div>
                 </div>
               ) : null}
+
+              {/* Schritt 3: Algenvorbeugung */}
+              <div style={{
+                background: "white", borderRadius: 14, padding: "12px 16px", marginBottom: 14,
+                boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                borderLeft: `4px solid ${algenDue ? "#f59e0b" : "#22c55e"}`,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: algenDue ? "#92400e" : "#15803d" }}>
+                      🌿 Schritt 3 — Algenvorbeugung
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 3, lineHeight: 1.5 }}>
+                      {algenDue
+                        ? daysSinceAlgen === null
+                          ? "Noch nie eingetragen — vorbeugend alle 1–2 Wochen zugeben"
+                          : `Letzter Eintrag vor ${daysSinceAlgen} Tagen — wieder fällig`
+                        : `Zuletzt vor ${daysSinceAlgen} Tagen — im grünen Bereich`
+                      }
+                    </div>
+                  </div>
+                  <div style={{
+                    background: algenDue ? "#fef3c7" : "#d1fae5",
+                    color: algenDue ? "#92400e" : "#065f46",
+                    borderRadius: 8, padding: "3px 8px", fontSize: "0.65rem", fontWeight: 700, flexShrink: 0,
+                  }}>
+                    {algenDue ? "fällig" : "OK"}
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, fontSize: "0.72rem", color: "#475569", lineHeight: 1.6, background: "#f8fafc", borderRadius: 8, padding: "7px 10px" }}>
+                  Algenmittel (z.B. Desalgin® JET) <b>vorbeugend</b> zugeben — bevor das Wasser grün wird. Menge: ca. 1–2 ml pro 1.000 L, gemäß Produktbeschriftung. Beim nächsten Messeintrag unter «Chemikalie» → Algenmittel eintragen.
+                </div>
+              </div>
+
+              {/* Problem-Diagnose */}
+              <ProblemDiagnose />
 
               {/* Filterpflege */}
               <FilterCareCard
