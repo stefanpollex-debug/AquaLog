@@ -10,9 +10,11 @@ interface Props {
 export function SwimmingReadiness({ last, daysSinceLast }: Props) {
   if (!last) return null;
 
-  const badFields = (["cl", "ph", "temp"] as FieldKey[]).filter(
-    (k) => getStatus(k, last[k] as number) !== "ok"
-  );
+  const badFields = (["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).filter((k) => {
+    const val = last[k as keyof typeof last];
+    if (val == null) return false;
+    return getStatus(k, val as number) !== "ok";
+  });
   const isStale = daysSinceLast !== null && daysSinceLast >= 3;
 
   type Level = "green" | "yellow" | "red";

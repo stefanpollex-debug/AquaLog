@@ -36,9 +36,9 @@ import { daysSinceEntry }    from "./utils/filterLog";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
 
-const DEFAULT_VALUES = { cl: 3.0, ph: 7.4, temp: 38, kh: 100 };
+const DEFAULT_VALUES = { cl: 3.0, ph: 7.4, temp: 38, kh: 100, gh: 250 };
 const FIELD_LABELS: Record<FieldKey, string> = {
-  cl: "Chlor (Cl)", ph: "pH-Wert", temp: "Temperatur", kh: "Alkalinität (KH)",
+  cl: "Chlor (Cl)", ph: "pH-Wert", temp: "Temperatur", kh: "Alkalinität (KH)", gh: "Gesamthärte (GH)",
 };
 
 export default function App() {
@@ -49,11 +49,12 @@ export default function App() {
   const { weather, loading: wxLoading, minutesAgo } = useWeather();
 
   const [form, setForm]       = useState({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
-  const [touched, setTouched] = useState<Record<FieldKey, boolean>>({ cl: false, ph: false, temp: false, kh: false });
+  const [touched, setTouched] = useState<Record<FieldKey, boolean>>({ cl: false, ph: false, temp: false, kh: false, gh: false });
   const [tab, setTab]         = useState<Tab>("eingabe");
   const [saved, setSaved]     = useState(false);
   const [chemicals, setChemicals]          = useState<ChemicalAddition[]>([]);
   const [deleteTarget, setDeleteTarget]    = useState<PoolEntry | null>(null);
+  const [showChloramine, setShowChloramine] = useState(false);
   const [showList, setShowList]            = useState(false);
   const [showProfileSheet, setShowProfile] = useState(false);
 
@@ -77,6 +78,7 @@ export default function App() {
       ph:   +form.ph,
       temp: +form.temp,
       ...(touched.kh ? { kh: +form.kh } : {}),
+      ...(touched.gh ? { gh: +form.gh } : {}),
       note: form.note,
       // Wetter automatisch speichern (Temp + UV + heutiger Tages-Niederschlag)
       ...(weather ? {
@@ -88,7 +90,7 @@ export default function App() {
       ...(chemicals.length > 0 ? { chemicals } : {}),
     });
     setForm({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
-    setTouched({ cl: false, ph: false, temp: false, kh: false });
+    setTouched({ cl: false, ph: false, temp: false, kh: false, gh: false });
     setChemicals([]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
@@ -140,9 +142,9 @@ export default function App() {
   }, [waterChange.record]);
 
   const poolTips = last
-    ? (["cl", "ph", "temp", "kh"] as FieldKey[])
+    ? (["cl", "ph", "temp", "kh", "gh"] as FieldKey[])
         .map((k) => {
-          const val = last[k];
+          const val = last[k as keyof typeof last] as number | undefined;
           if (val == null) return null;
           const st = getStatus(k, val);
           return st !== "ok" ? getTipWithDose(k, st, val, volumeM3) : null;
@@ -193,13 +195,13 @@ export default function App() {
           {last && (
             <div style={{ marginTop: 14 }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", opacity: staleWarn ? 0.55 : 1 }}>
-                {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => {
-                  const val = last[k];
+                {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => {
+                  const val = last[k as keyof typeof last] as number | undefined;
                   if (val == null) return null;
                   return (
                     <div key={k} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px", fontSize: "0.75rem" }}>
                       <span style={{ opacity: 0.8 }}>{LIMITS[k].label}: </span>
-                      <b>{val.toFixed(k === "kh" ? 0 : 1)}{LIMITS[k].unit}</b>
+                      <b>{val.toFixed(k === "kh" || k === "gh" ? 0 : 1)}{LIMITS[k].unit}</b>
                       <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, val)} /></span>
                     </div>
                   );
@@ -303,12 +305,12 @@ export default function App() {
               </div>
 
               {/* Sliders */}
-              {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => (
+              {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => (
                 <div key={k} style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>
                       {FIELD_LABELS[k]}
-                      {k === "kh" && <span style={{ fontWeight: 400, fontSize: "0.72rem", color: "#94a3b8", marginLeft: 6 }}>optional</span>}
+                      {(k === "kh" || k === "gh") && <span style={{ fontWeight: 400, fontSize: "0.72rem", color: "#94a3b8", marginLeft: 6 }}>optional</span>}
                     </span>
                     <TrafficLight status={touched[k] ? getStatus(k, form[k]) : "ok"} />
                   </div>
@@ -378,7 +380,7 @@ export default function App() {
               <CalendarHeatmap entries={entries} onDelete={(e) => setDeleteTarget(e)} />
 
               {/* Charts */}
-              {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => (
+              {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => (
                 <div key={k} style={{ background: "white", borderRadius: 18, padding: "16px 8px 8px", boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
                   <div style={{ fontWeight: 700, color: "#1e293b", marginBottom: 8, paddingLeft: 8, fontSize: "0.88rem" }}>{FIELD_LABELS[k]}</div>
                   <ResponsiveContainer width="100%" height={140}>
@@ -440,12 +442,12 @@ export default function App() {
                             </div>
                             {/* Zeile 2: Messwerte */}
                             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                              {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => {
-                                const val = e[k];
+                              {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => {
+                                const val = e[k as keyof typeof e] as number | undefined;
                                 if (val == null) return null;
                                 return (
                                   <span key={k} style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 3 }}>
-                                    <b style={{ color: "#1e293b" }}>{val.toFixed(k === "kh" ? 0 : 1)}{LIMITS[k].unit}</b>
+                                    <b style={{ color: "#1e293b" }}>{val.toFixed(k === "kh" || k === "gh" ? 0 : 1)}{LIMITS[k].unit}</b>
                                     <StatusBadge status={getStatus(k, val)} />
                                   </span>
                                 );
@@ -550,6 +552,7 @@ export default function App() {
                 currentCl={last?.cl}
                 currentPh={last?.ph}
                 currentKh={last?.kh}
+                currentGh={last?.gh}
               />
 
               {/* KI-Wasseranalyse */}
@@ -559,7 +562,7 @@ export default function App() {
               <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
                 <div style={{ fontWeight: 700, color: "#0369a1", marginBottom: 12, fontSize: "0.95rem" }}>ℹ️ OK-Bereiche</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => (
+                  {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => (
                     <div key={k} style={{ background: "#f8fafc", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
                       <div style={{ fontSize: "0.68rem", color: "#64748b", marginBottom: 4 }}>{LIMITS[k].label}</div>
                       <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#22c55e" }}>{LIMITS[k].min}–{LIMITS[k].max}</div>
@@ -567,6 +570,41 @@ export default function App() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Chloramin-Info */}
+              <div style={{ background: "white", borderRadius: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14, overflow: "hidden" }}>
+                <button
+                  onClick={() => setShowChloramine(v => !v)}
+                  style={{
+                    width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                    background: "none", border: "none", padding: "14px 18px", cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0369a1" }}>
+                    🔬 Chlorgeruch trotz OK-Wert?
+                  </span>
+                  <span style={{ color: "#94a3b8", fontSize: "0.85rem", transition: "transform 0.2s", display: "inline-block", transform: showChloramine ? "rotate(180deg)" : "none" }}>▼</span>
+                </button>
+                {showChloramine && (
+                  <div style={{ padding: "0 18px 16px", borderTop: "1px solid #f1f5f9" }}>
+                    <p style={{ margin: "12px 0 8px", fontSize: "0.83rem", color: "#374151", lineHeight: 1.65 }}>
+                      Chlorgeruch ist <b>kein Zeichen für zu viel Chlor</b> — sondern für <b>gebundenes Chlor (Chloramine)</b>.
+                      Diese entstehen wenn freies Chlor mit organischen Stoffen reagiert: Schweiß, Sonnencreme, Hautöl.
+                      Chloramine haben keine desinfizierende Wirkung, riechen aber scharf und reizen Augen und Schleimhäute.
+                    </p>
+                    <div style={{ background: "#fef3c7", borderRadius: 10, padding: "10px 12px", marginBottom: 10, fontSize: "0.78rem", color: "#92400e" }}>
+                      <b>Anzeichen:</b> Stechender Chlorgeruch · Gerötete Augen · Trübes Wasser — trotz Cl 3–5 mg/l
+                    </div>
+                    <div style={{ background: "#f0fdf4", borderRadius: 10, padding: "10px 12px", fontSize: "0.78rem", color: "#166534", lineHeight: 1.6 }}>
+                      <b>Maßnahme: Stoßchlorierung</b><br />
+                      1. Cl auf 10–15 mg/l erhöhen (Abdeckung auf, Pumpe läuft)<br />
+                      2. 30 Min. umwälzen<br />
+                      3. ⏰ 24–48 Std. Badepause bis Cl unter 5 mg/l<br />
+                      4. Danach regelmäßig nach Nutzung lüften und Wasser alle 3 Monate wechseln
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
