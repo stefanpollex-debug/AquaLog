@@ -25,8 +25,8 @@ function uvLabel(uv: number) {
 export function WeatherWidget({ weather, loading, minutesAgo }: Props) {
   if (loading && !weather) {
     return (
-      <div style={{ background: "white", borderRadius: 18, padding: "14px 18px", boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
-        <div style={{ color: "#94a3b8", fontSize: "0.82rem" }}>🌤️ Wetterdaten werden geladen…</div>
+      <div style={{ background: "white", borderRadius: 14, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: 14 }}>
+        <div style={{ color: "#94a3b8", fontSize: "0.82rem" }}>Wetterdaten werden geladen…</div>
       </div>
     );
   }
@@ -35,22 +35,22 @@ export function WeatherWidget({ weather, loading, minutesAgo }: Props) {
   const isOffline = minutesAgo !== null && minutesAgo > 60;
 
   return (
-    <div style={{ background: "white", borderRadius: 18, padding: "16px 18px 14px", boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
+    <div style={{ background: "white", borderRadius: 14, padding: "14px 16px 12px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: 14 }}>
 
       {/* Titelzeile */}
-      <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#94a3b8", marginBottom: 10, letterSpacing: "0.03em" }}>
-        📍 ESPELKAMP — AKTUELL
+      <div style={{ fontSize: "0.68rem", fontWeight: 600, color: "#94a3b8", marginBottom: 10, letterSpacing: "0.04em" }}>
+        ESPELKAMP
       </div>
 
       {/* Aktuelles Wetter */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: "3rem", lineHeight: 1 }}>{getWmoIcon(weather.weatherCode)}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: "2rem", lineHeight: 1 }}>{getWmoIcon(weather.weatherCode)}</div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: "1.8rem", color: "#1e293b", lineHeight: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: "1.4rem", color: "#1e293b", lineHeight: 1 }}>
               {weather.currentTemp.toFixed(1)}°C
             </div>
-            <div style={{ fontSize: "0.73rem", color: "#64748b", marginTop: 3 }}>
+            <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: 2 }}>
               {getWmoLabel(weather.weatherCode)}
             </div>
           </div>
@@ -58,15 +58,15 @@ export function WeatherWidget({ weather, loading, minutesAgo }: Props) {
 
         {/* UV-Index */}
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 800, fontSize: "1.4rem", color: uvColor(weather.currentUv), lineHeight: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: "1.1rem", color: uvColor(weather.currentUv), lineHeight: 1 }}>
             UV {weather.currentUv.toFixed(1)}
           </div>
-          <div style={{ fontSize: "0.7rem", color: uvColor(weather.currentUv), marginTop: 2 }}>
+          <div style={{ fontSize: "0.68rem", color: uvColor(weather.currentUv), marginTop: 2 }}>
             {uvLabel(weather.currentUv)}
           </div>
           {weather.currentPrecipitation > 0 && (
-            <div style={{ fontSize: "0.68rem", color: "#0ea5e9", marginTop: 4 }}>
-              💧 {weather.currentPrecipitation.toFixed(1)} mm
+            <div style={{ fontSize: "0.68rem", color: "#0ea5e9", marginTop: 3 }}>
+              {weather.currentPrecipitation.toFixed(1)} mm
             </div>
           )}
         </div>
@@ -80,12 +80,12 @@ export function WeatherWidget({ weather, loading, minutesAgo }: Props) {
           return (
             <div key={day.date} style={{
               background: "#f8fafc", borderRadius: 10,
-              padding: "8px 6px", textAlign: "center",
+              padding: "7px 6px", textAlign: "center",
             }}>
               <div style={{ fontSize: "0.62rem", color: "#94a3b8", marginBottom: 3, fontWeight: 600 }}>{label}</div>
-              <div style={{ fontSize: "1.4rem", lineHeight: 1, marginBottom: 3 }}>{forecastIcon(day)}</div>
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>{day.tempMax.toFixed(0)}°</div>
-              <div style={{ fontSize: "0.6rem", color: "#94a3b8" }}>💧{day.precipProbability}%</div>
+              <div style={{ fontSize: "1.2rem", lineHeight: 1, marginBottom: 3 }}>{forecastIcon(day)}</div>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>{day.tempMax.toFixed(0)}°</div>
+              <div style={{ fontSize: "0.6rem", color: "#94a3b8" }}>{day.precipProbability}%</div>
               <div style={{ fontSize: "0.6rem", color: uvColor(day.uvMax) }}>UV {day.uvMax.toFixed(0)}</div>
             </div>
           );
@@ -95,7 +95,7 @@ export function WeatherWidget({ weather, loading, minutesAgo }: Props) {
       {/* Offline / Timestamp */}
       {isOffline ? (
         <div style={{ marginTop: 10, fontSize: "0.67rem", color: "#f59e0b", textAlign: "center" }}>
-          📴 Offline-Modus — Stand: vor {minutesAgo} Minuten
+          Offline — Stand: vor {minutesAgo} Minuten
         </div>
       ) : minutesAgo !== null && minutesAgo > 2 ? (
         <div style={{ marginTop: 8, fontSize: "0.6rem", color: "#cbd5e1", textAlign: "right" }}>

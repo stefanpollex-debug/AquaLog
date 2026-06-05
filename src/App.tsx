@@ -38,7 +38,7 @@ type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
 
 const DEFAULT_VALUES = { cl: 1.0, ph: 7.0, temp: 22 };
 const FIELD_LABELS: Record<FieldKey, string> = {
-  cl: "🟦 Chlor (Cl)", ph: "🟣 pH-Wert", temp: "🟠 Temperatur",
+  cl: "Chlor (Cl)", ph: "pH-Wert", temp: "Temperatur",
 };
 
 export default function App() {
@@ -150,13 +150,13 @@ export default function App() {
   const weatherHints = weather ? getWeatherPoolHints(weather) : [];
 
   if (!loaded) return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#e0f2fe,#bae6fd)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ color: "#0369a1", fontWeight: 600 }}>Lade Daten…</div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#e0f2fe 0%,#bae6fd 100%)", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f1f5f9", fontFamily: "system-ui,sans-serif" }}>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 0 80px" }}>
 
         {/* ── Header ──────────────────────────────────────────────── */}
@@ -256,10 +256,10 @@ export default function App() {
         <div style={{ display: "flex", background: "white", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 10 }}>
           {(["eingabe", "verlauf", "trends", "hinweise"] as Tab[]).map((t) => {
             const labels: Record<Tab, string> = {
-              eingabe: "✏️ Eingabe",
-              verlauf: "📈 Verlauf",
-              trends:  "📊 Trends",
-              hinweise:"💡 Tipps",
+              eingabe: "Eingabe",
+              verlauf: "Verlauf",
+              trends:  "Trends",
+              hinweise:"Tipps",
             };
             return (
               <button key={t} onClick={() => setTab(t)} style={{
@@ -472,8 +472,8 @@ export default function App() {
               {/* Wetter-Pool-Hinweise */}
               {weatherHints.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontWeight: 700, color: "#d97706", marginBottom: 10, fontSize: "0.92rem" }}>
-                    🌤️ Wetter-Hinweise
+                  <div style={{ fontWeight: 600, color: "#92400e", marginBottom: 10, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Wetter-Hinweise
                   </div>
                   {weatherHints.map((hint, i) => (
                     <div key={i} style={{
@@ -489,7 +489,7 @@ export default function App() {
               {/* Aktuelle Pool-Maßnahmen */}
               {poolTips.length > 0 ? (
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontWeight: 700, color: "#dc2626", marginBottom: 10, fontSize: "0.95rem" }}>🚨 Aktuelle Maßnahmen</div>
+                  <div style={{ fontWeight: 600, color: "#dc2626", marginBottom: 10, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Maßnahmen</div>
                   {poolTips.map((tip, i) => (
                     <div key={i} style={{ background: "white", borderRadius: 14, padding: "14px 16px", marginBottom: 10, boxShadow: "0 2px 8px #ef44440d", borderLeft: "4px solid #f59e0b" }}>
                       <p style={{ margin: 0, fontSize: "0.88rem", lineHeight: 1.6, color: "#1e293b" }}>{tip}</p>
@@ -497,11 +497,13 @@ export default function App() {
                   ))}
                 </div>
               ) : last ? (
-                <div style={{ background: "#d1fae5", borderRadius: 14, padding: 16, marginBottom: 14, textAlign: "center" }}>
-                  <div style={{ fontSize: "1.5rem" }}>✅</div>
-                  <div style={{ fontWeight: 700, color: "#065f46", marginTop: 6 }}>Alle Werte im grünen Bereich!</div>
-                  <div style={{ fontSize: "0.8rem", color: "#047857", marginTop: 4 }}>
-                    Letzte Messung: {new Date(last.date + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                <div style={{ background: "#f0fdf4", borderRadius: 14, padding: "12px 16px", marginBottom: 14, display: "flex", alignItems: "center", gap: 12, borderLeft: "4px solid #22c55e", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#15803d", fontSize: "0.9rem" }}>Alle Werte im grünen Bereich</div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 2 }}>
+                      Letzte Messung: {new Date(last.date + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                    </div>
                   </div>
                 </div>
               ) : null}
