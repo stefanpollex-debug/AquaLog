@@ -482,7 +482,9 @@ export default function App() {
                 <div style={{ background: "#d1fae5", borderRadius: 14, padding: 16, marginBottom: 14, textAlign: "center" }}>
                   <div style={{ fontSize: "1.5rem" }}>✅</div>
                   <div style={{ fontWeight: 700, color: "#065f46", marginTop: 6 }}>Alle Werte im grünen Bereich!</div>
-                  <div style={{ fontSize: "0.8rem", color: "#047857", marginTop: 4 }}>Letzte Messung: {last.date}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#047857", marginTop: 4 }}>
+                    Letzte Messung: {new Date(last.date + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                  </div>
                 </div>
               ) : null}
 
