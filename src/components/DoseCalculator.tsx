@@ -5,25 +5,29 @@ interface Props {
   volumeLiters: number;
   currentCl?: number;
   currentPh?: number;
+  currentKh?: number;
 }
 
-export function DoseCalculator({ volumeLiters, currentCl, currentPh }: Props) {
+export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh }: Props) {
   const volumeM3 = volumeLiters / 1000;
 
-  const [clCurrent, setClCurrent] = useState(currentCl ?? 0.5);
-  const [clTarget,  setClTarget]  = useState(1.0);
+  const [clCurrent, setClCurrent] = useState(currentCl ?? 2.0);
+  const [clTarget,  setClTarget]  = useState(4.0);
   const [phCurrent, setPhCurrent] = useState(currentPh ?? 7.5);
-  const [phTarget,  setPhTarget]  = useState(7.2);
+  const [phTarget,  setPhTarget]  = useState(7.4);
+  const [khCurrent, setKhCurrent] = useState(currentKh ?? 60);
+  const [khTarget,  setKhTarget]  = useState(100);
 
-  const clDelta      = clTarget - clCurrent;
-  const phDelta      = phTarget - phCurrent;
-  const phSteps      = Math.abs(phDelta) / 0.1;
-  const clDose       = clDelta  >  0.05 ? calcDose("chlor",    clDelta,  volumeM3) : 0;
-  const phPlusDose   = phDelta  >  0.05 ? calcDose("ph_plus",  phSteps,  volumeM3) : 0;
-  const phMinusDose  = phDelta  < -0.05 ? calcDose("ph_minus", phSteps,  volumeM3) : 0;
+  const clDelta     = clTarget - clCurrent;
+  const phDelta     = phTarget - phCurrent;
+  const phSteps     = Math.abs(phDelta) / 0.1;
+  const clDose      = clDelta  >  0.05 ? calcDose("chlor",    clDelta,  volumeM3) : 0;
+  const phPlusDose  = phDelta  >  0.05 ? calcDose("ph_plus",  phSteps,  volumeM3) : 0;
+  const phMinusDose = phDelta  < -0.05 ? calcDose("ph_minus", phSteps,  volumeM3) : 0;
 
-  // Total Blue: Steinbach empfiehlt 1 Tab (20g) pro ~1000L pro Woche im Dosierschwimmer
-  const totalBlueTabs = Math.max(1, Math.round(volumeLiters / 1000));
+  const khDelta     = khCurrent < khTarget - 5 ? (khTarget - khCurrent) / 10 : 0;
+  const khDose      = khDelta > 0 ? calcDose("kh_plus", khDelta, volumeM3) : 0;
+  const khTooHigh   = khCurrent > 130;
 
   function SliderRow({
     label, value, onChange, min, max, step, unit,
@@ -40,7 +44,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh }: Props) {
           style={{ flex: 1, accentColor: "#0369a1" }}
         />
         <span style={{ fontSize: "0.85rem", fontWeight: 700, width: 56, textAlign: "right", flexShrink: 0, color: "#1e293b" }}>
-          {value.toFixed(1)}{unit}
+          {value.toFixed(step < 1 ? 1 : 0)}{unit}
         </span>
       </div>
     );
@@ -72,15 +76,18 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh }: Props) {
         <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#15803d", marginBottom: 8 }}>
           🟢 Schnellkorrektur — Chlor Granulat
         </div>
-        <SliderRow label="Aktuell" value={clCurrent} onChange={setClCurrent} min={0}   max={3}   step={0.1} unit=" mg/l" />
-        <SliderRow label="Ziel"    value={clTarget}  onChange={setClTarget}  min={0}   max={3}   step={0.1} unit=" mg/l" />
+        <SliderRow label="Aktuell" value={clCurrent} onChange={setClCurrent} min={0}   max={10}  step={0.1} unit=" mg/l" />
+        <SliderRow label="Ziel"    value={clTarget}  onChange={setClTarget}  min={0}   max={10}  step={0.1} unit=" mg/l" />
         {clDelta < -0.05 ? (
           <div style={{ marginTop: 6, background: "#fef9c3", borderRadius: 8, padding: "7px 10px", fontSize: "0.75rem", color: "#713f12" }}>
-            ⏳ Abbauwarten — Abdeckung öffnen, Pool lüften
+            ⏳ Abbauwarten — Abdeckung öffnen, Spa 24–48 Std. lüften
           </div>
         ) : (
           <ResultBox dose={clDose} productName="Steinbach Chlor Granulat Schnelllöslich" bg="#dcfce7" color="#15803d" />
         )}
+        <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
+          Zielbereich Spa/Whirlpool: 3–5 mg/l · Immer pH zuerst korrigieren
+        </div>
       </div>
 
       {/* ── Total Blue (Dauerchlorierung) ───────────────────────── */}
@@ -92,21 +99,21 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh }: Props) {
           Tab in Dosierschwimmer geben — löst sich langsam auf.
         </div>
         <div style={{ background: "#dbeafe", borderRadius: 8, padding: "8px 12px" }}>
-          <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1d4ed8" }}>{totalBlueTabs} Tab</span>
+          <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#1d4ed8" }}>1 Tab</span>
           <span style={{ fontSize: "0.72rem", color: "#475569", marginLeft: 6 }}>Steinbach Total Blue 20g pro Woche</span>
         </div>
-        <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
-          Nach 3–4 Tagen Cl messen und ggf. nachjustieren
+        <div style={{ marginTop: 8, background: "#fef3c7", borderRadius: 8, padding: "8px 10px", fontSize: "0.68rem", color: "#92400e", lineHeight: 1.5 }}>
+          ⚠️ Hinweis: Trichlor-Tabs enthalten Isocyanursäure (CYA). Im Spa/Whirlpool kann CYA sich schnell anreichern und die Chlorwirkung stark reduzieren (sog. Chlorlock). Regelmäßiger Teilwasserwechsel (alle 3 Mon.) ist daher besonders wichtig.
         </div>
       </div>
 
       {/* ── pH ─────────────────────────────────────────────────── */}
-      <div style={{ background: "#f5f3ff", borderRadius: 12, padding: "12px 12px 10px", marginBottom: 12 }}>
+      <div style={{ background: "#f5f3ff", borderRadius: 12, padding: "12px 12px 10px", marginBottom: 10 }}>
         <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#6d28d9", marginBottom: 8 }}>
           🟣 pH-Wert
         </div>
-        <SliderRow label="Aktuell" value={phCurrent} onChange={setPhCurrent} min={6.0} max={9.0} step={0.1} unit="" />
-        <SliderRow label="Ziel"    value={phTarget}  onChange={setPhTarget}  min={6.0} max={9.0} step={0.1} unit="" />
+        <SliderRow label="Aktuell" value={phCurrent} onChange={setPhCurrent} min={6.5} max={8.5} step={0.1} unit="" />
+        <SliderRow label="Ziel"    value={phTarget}  onChange={setPhTarget}  min={6.5} max={8.5} step={0.1} unit="" />
         {phPlusDose  > 0 && <ResultBox dose={phPlusDose}  productName="pH-Plus einrühren"  bg="#ede9fe" color="#5b21b6" />}
         {phMinusDose > 0 && <ResultBox dose={phMinusDose} productName="pH-Minus einrühren" bg="#fce7f3" color="#9d174d" />}
         {phPlusDose === 0 && phMinusDose === 0 && (
@@ -114,6 +121,35 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh }: Props) {
             ✓ Zielwert erreicht
           </div>
         )}
+        <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
+          Zielbereich Spa: 7,2–7,6 · Erst pH korrigieren, dann Chlor zugeben
+        </div>
+      </div>
+
+      {/* ── Alkalinität KH ─────────────────────────────────────── */}
+      <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "12px 12px 10px", marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#065f46", marginBottom: 8 }}>
+          🟤 Alkalinität (KH)
+        </div>
+        <SliderRow label="Aktuell" value={khCurrent} onChange={setKhCurrent} min={20}  max={250} step={5}   unit=" mg/l" />
+        <SliderRow label="Ziel"    value={khTarget}  onChange={setKhTarget}  min={80}  max={120} step={5}   unit=" mg/l" />
+        {khTooHigh ? (
+          <div style={{ marginTop: 6, background: "#fef9c3", borderRadius: 8, padding: "7px 10px", fontSize: "0.75rem", color: "#713f12" }}>
+            ⚠️ KH zu hoch: Teilwasserwechsel empfohlen. Keine Chemikalien zur KH-Senkung im Spa verwenden.
+          </div>
+        ) : khDose > 0 ? (
+          <div style={{ marginTop: 6, background: "#d1fae5", borderRadius: 8, padding: "8px 12px" }}>
+            <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#065f46" }}>{khDose} g</span>
+            <span style={{ fontSize: "0.72rem", color: "#475569", marginLeft: 6 }}>Natriumhydrogencarbonat (Alkalinität-Plus)</span>
+          </div>
+        ) : (
+          <div style={{ marginTop: 6, background: "#d1fae5", borderRadius: 8, padding: "7px 10px", fontSize: "0.75rem", color: "#065f46" }}>
+            ✓ Alkalinität im Zielbereich
+          </div>
+        )}
+        <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
+          Zielbereich Spa: 80–120 mg/l · Nach Zugabe 2 Std. warten, dann KH + pH messen
+        </div>
       </div>
 
       <div style={{ fontSize: "0.65rem", color: "#94a3b8", textAlign: "center", lineHeight: 1.5 }}>

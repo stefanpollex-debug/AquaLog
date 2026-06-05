@@ -36,9 +36,9 @@ import { daysSinceEntry }    from "./utils/filterLog";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
 
-const DEFAULT_VALUES = { cl: 1.0, ph: 7.0, temp: 22 };
+const DEFAULT_VALUES = { cl: 3.0, ph: 7.4, temp: 38, kh: 100 };
 const FIELD_LABELS: Record<FieldKey, string> = {
-  cl: "Chlor (Cl)", ph: "pH-Wert", temp: "Temperatur",
+  cl: "Chlor (Cl)", ph: "pH-Wert", temp: "Temperatur", kh: "Alkalinität (KH)",
 };
 
 export default function App() {
@@ -49,7 +49,7 @@ export default function App() {
   const { weather, loading: wxLoading, minutesAgo } = useWeather();
 
   const [form, setForm]       = useState({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
-  const [touched, setTouched] = useState<Record<FieldKey, boolean>>({ cl: false, ph: false, temp: false });
+  const [touched, setTouched] = useState<Record<FieldKey, boolean>>({ cl: false, ph: false, temp: false, kh: false });
   const [tab, setTab]         = useState<Tab>("eingabe");
   const [saved, setSaved]     = useState(false);
   const [chemicals, setChemicals]          = useState<ChemicalAddition[]>([]);
@@ -76,6 +76,7 @@ export default function App() {
       cl:   +form.cl,
       ph:   +form.ph,
       temp: +form.temp,
+      ...(touched.kh ? { kh: +form.kh } : {}),
       note: form.note,
       // Wetter automatisch speichern (Temp + UV + heutiger Tages-Niederschlag)
       ...(weather ? {
@@ -87,7 +88,7 @@ export default function App() {
       ...(chemicals.length > 0 ? { chemicals } : {}),
     });
     setForm({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
-    setTouched({ cl: false, ph: false, temp: false });
+    setTouched({ cl: false, ph: false, temp: false, kh: false });
     setChemicals([]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
@@ -139,10 +140,12 @@ export default function App() {
   }, [waterChange.record]);
 
   const poolTips = last
-    ? (["cl", "ph", "temp"] as FieldKey[])
+    ? (["cl", "ph", "temp", "kh"] as FieldKey[])
         .map((k) => {
-          const st = getStatus(k, last[k]);
-          return st !== "ok" ? getTipWithDose(k, st, last[k], volumeM3) : null;
+          const val = last[k];
+          if (val == null) return null;
+          const st = getStatus(k, val);
+          return st !== "ok" ? getTipWithDose(k, st, val, volumeM3) : null;
         })
         .filter(Boolean)
     : [];
@@ -190,13 +193,17 @@ export default function App() {
           {last && (
             <div style={{ marginTop: 14 }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", opacity: staleWarn ? 0.55 : 1 }}>
-                {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
-                  <div key={k} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px", fontSize: "0.75rem" }}>
-                    <span style={{ opacity: 0.8 }}>{LIMITS[k].label}: </span>
-                    <b>{last[k].toFixed(1)}{LIMITS[k].unit}</b>
-                    <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, last[k])} /></span>
-                  </div>
-                ))}
+                {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => {
+                  const val = last[k];
+                  if (val == null) return null;
+                  return (
+                    <div key={k} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px", fontSize: "0.75rem" }}>
+                      <span style={{ opacity: 0.8 }}>{LIMITS[k].label}: </span>
+                      <b>{val.toFixed(k === "kh" ? 0 : 1)}{LIMITS[k].unit}</b>
+                      <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, val)} /></span>
+                    </div>
+                  );
+                })}
               </div>
               {staleWarn && (
                 <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.55)", marginTop: 5, fontStyle: "italic" }}>
@@ -296,10 +303,13 @@ export default function App() {
               </div>
 
               {/* Sliders */}
-              {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
+              {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => (
                 <div key={k} style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>{FIELD_LABELS[k]}</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>
+                      {FIELD_LABELS[k]}
+                      {k === "kh" && <span style={{ fontWeight: 400, fontSize: "0.72rem", color: "#94a3b8", marginLeft: 6 }}>optional</span>}
+                    </span>
                     <TrafficLight status={touched[k] ? getStatus(k, form[k]) : "ok"} />
                   </div>
                   <ValueSlider field={k} value={form[k]} touched={touched[k]} onChange={(v) => touch(k, v)} />
@@ -368,7 +378,7 @@ export default function App() {
               <CalendarHeatmap entries={entries} onDelete={(e) => setDeleteTarget(e)} />
 
               {/* Charts */}
-              {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
+              {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => (
                 <div key={k} style={{ background: "white", borderRadius: 18, padding: "16px 8px 8px", boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
                   <div style={{ fontWeight: 700, color: "#1e293b", marginBottom: 8, paddingLeft: 8, fontSize: "0.88rem" }}>{FIELD_LABELS[k]}</div>
                   <ResponsiveContainer width="100%" height={140}>
@@ -430,12 +440,16 @@ export default function App() {
                             </div>
                             {/* Zeile 2: Messwerte */}
                             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                              {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
-                                <span key={k} style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 3 }}>
-                                  <b style={{ color: "#1e293b" }}>{e[k].toFixed(1)}{LIMITS[k].unit}</b>
-                                  <StatusBadge status={getStatus(k, e[k])} />
-                                </span>
-                              ))}
+                              {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => {
+                                const val = e[k];
+                                if (val == null) return null;
+                                return (
+                                  <span key={k} style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 3 }}>
+                                    <b style={{ color: "#1e293b" }}>{val.toFixed(k === "kh" ? 0 : 1)}{LIMITS[k].unit}</b>
+                                    <StatusBadge status={getStatus(k, val)} />
+                                  </span>
+                                );
+                              })}
                               {e.chemicals?.map(c => (
                                 <span key={c.product} style={{ fontSize: "0.65rem", background: "#f0fdf4", color: "#15803d", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>
                                   🧪 {c.amount}{c.unit}
@@ -535,6 +549,7 @@ export default function App() {
                 volumeLiters={profile.volumeLiters}
                 currentCl={last?.cl}
                 currentPh={last?.ph}
+                currentKh={last?.kh}
               />
 
               {/* KI-Wasseranalyse */}
@@ -543,8 +558,8 @@ export default function App() {
               {/* OK-Bereiche */}
               <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
                 <div style={{ fontWeight: 700, color: "#0369a1", marginBottom: 12, fontSize: "0.95rem" }}>ℹ️ OK-Bereiche</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                  {(["cl", "ph", "temp"] as FieldKey[]).map((k) => (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {(["cl", "ph", "temp", "kh"] as FieldKey[]).map((k) => (
                     <div key={k} style={{ background: "#f8fafc", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
                       <div style={{ fontSize: "0.68rem", color: "#64748b", marginBottom: 4 }}>{LIMITS[k].label}</div>
                       <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#22c55e" }}>{LIMITS[k].min}–{LIMITS[k].max}</div>

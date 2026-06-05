@@ -33,7 +33,7 @@ export function getAvailableMonths(entries: PoolEntry[]): MonthRef[] {
 export function getDayColor(entry: PoolEntry | undefined): string | null {
   if (!entry) return null;
   const bad = (["cl", "ph", "temp"] as FieldKey[])
-    .filter(k => getStatus(k, entry[k]) !== "ok").length;
+    .filter(k => getStatus(k, entry[k] as number) !== "ok").length;
   if (bad === 0) return "#22c55e";
   if (bad === 1) return "#f59e0b";
   return "#ef4444";

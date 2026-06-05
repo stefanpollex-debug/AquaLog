@@ -17,6 +17,7 @@ export interface PoolEntry {
   cl: number;
   ph: number;
   temp: number;
+  kh?: number;                      // Alkalinität / Karbonathärte (mg/l) — optional
   note: string;
   outTemp?:    number;              // Außentemperatur (°C)
   uvIndex?:    number;              // UV-Index

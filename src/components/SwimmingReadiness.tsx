@@ -11,7 +11,7 @@ export function SwimmingReadiness({ last, daysSinceLast }: Props) {
   if (!last) return null;
 
   const badFields = (["cl", "ph", "temp"] as FieldKey[]).filter(
-    (k) => getStatus(k, last[k]) !== "ok"
+    (k) => getStatus(k, last[k] as number) !== "ok"
   );
   const isStale = daysSinceLast !== null && daysSinceLast >= 3;
 

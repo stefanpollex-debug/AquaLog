@@ -22,8 +22,8 @@ export function StatCard({ entries }: Props) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {FIELDS.map(([k, emoji, u]) => {
           const a   = avg(entries as unknown as Array<Record<string, number>>, k).toFixed(1);
-          const mn  = Math.min(...entries.map((e) => e[k])).toFixed(1);
-          const mx  = Math.max(...entries.map((e) => e[k])).toFixed(1);
+          const mn  = Math.min(...entries.map((e) => e[k] as number)).toFixed(1);
+          const mx  = Math.max(...entries.map((e) => e[k] as number)).toFixed(1);
           const pct = pctOutOfRange(entries as unknown as Array<Record<string, number>>, k);
           return (
             <div key={k} style={{ background: "#f8fafc", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>

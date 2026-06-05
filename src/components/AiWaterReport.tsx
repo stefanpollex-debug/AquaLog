@@ -24,9 +24,11 @@ export function AiWaterReport({ last, profile, daysSinceLast }: Props) {
     setReport(null);
     setError(null);
 
-    const statusLines = (["cl", "ph", "temp"] as FieldKey[]).map((k) => {
-      const st = getStatus(k, last[k]);
-      return `${LIMITS[k].label}: ${last[k].toFixed(1)}${LIMITS[k].unit} (${STATUS_DE[st]}, OK-Bereich: ${LIMITS[k].min}–${LIMITS[k].max}${LIMITS[k].unit})`;
+    const statusLines = (["cl", "ph", "temp", "kh"] as FieldKey[]).flatMap((k) => {
+      const val = last[k];
+      if (val == null) return [];
+      const st = getStatus(k, val);
+      return [`${LIMITS[k].label}: ${val.toFixed(k === "kh" ? 0 : 1)}${LIMITS[k].unit} (${STATUS_DE[st]}, OK-Bereich: ${LIMITS[k].min}–${LIMITS[k].max}${LIMITS[k].unit})`];
     }).join("\n");
 
     const userMsg =

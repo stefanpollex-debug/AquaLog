@@ -163,9 +163,9 @@ export function CalendarHeatmap({ entries, onDelete }: Props) {
                     <div key={k} style={{ background: "#f8fafc", borderRadius: 10, padding: "8px 6px", flex: 1, textAlign: "center" }}>
                       <div style={{ fontSize: "0.62rem", color: "#64748b", marginBottom: 3 }}>{LIMITS[k].label}</div>
                       <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 4 }}>
-                        {selectedEntry[k].toFixed(1)}{LIMITS[k].unit}
+                        {(selectedEntry[k] as number).toFixed(1)}{LIMITS[k].unit}
                       </div>
-                      <StatusBadge status={getStatus(k, selectedEntry[k])} />
+                      <StatusBadge status={getStatus(k, selectedEntry[k] as number)} />
                     </div>
                   ))}
                 </div>

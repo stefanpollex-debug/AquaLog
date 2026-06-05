@@ -46,7 +46,7 @@ function analyzeValueTrend(entries: PoolEntry[], field: FieldKey): TrendResult |
   if (recent.length < 3) return null;
 
   const asc  = [...recent].reverse();            // älteste → neuste
-  const vals = asc.map(e => e[field]);
+  const vals = asc.map(e => e[field] as number);
   const limit = LIMITS[field];
 
   // Schwellenwert pro Feld (unter dem eine Änderung als Rauschen gilt)
@@ -62,7 +62,7 @@ function analyzeValueTrend(entries: PoolEntry[], field: FieldKey): TrendResult |
   const avgVal        = mean(vals).toFixed(1);
 
   // Alle Werte stabil im OK-Bereich?
-  const allOk  = asc.every(e => getStatus(field, e[field]) === "ok");
+  const allOk  = asc.every(e => getStatus(field, e[field] as number) === "ok");
   const spread = Math.max(...vals) - Math.min(...vals);
   if (allOk && spread < noise * 3 && recent.length >= 4) {
     return {
@@ -125,13 +125,13 @@ function analyzeForecast(entries: PoolEntry[], field: FieldKey): TrendResult | n
   for (let i = 1; i < asc.length; i++) {
     const days = daysBetween(asc[i - 1].date, asc[i].date);
     if (days > 0 && days <= 10) {
-      dailyChanges.push((asc[i][field] - asc[i - 1][field]) / days);
+      dailyChanges.push(((asc[i][field] as number) - (asc[i - 1][field] as number)) / days);
     }
   }
   if (!dailyChanges.length) return null;
 
   const dailyRate  = mean(dailyChanges);
-  const currentVal = asc[asc.length - 1][field];
+  const currentVal = asc[asc.length - 1][field] as number;
   const limit      = LIMITS[field];
 
   if (getStatus(field, currentVal) !== "ok") return null; // schon außerhalb → keine Prognose
