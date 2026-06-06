@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { API_BASE } from "../utils/api";
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { type PoolProfile } from "../hooks/usePoolProfile";
 import { getStatus } from "../utils/status";
@@ -44,7 +45,7 @@ export function AiWaterReport({ last, profile, daysSinceLast }: Props) {
     const timeoutId = setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
 
     try {
-      const res = await fetch("/api/anthropic", {
+      const res = await fetch(`${API_BASE}/api/anthropic`, {
         method: "POST",
         signal: controller.signal,
         headers: {

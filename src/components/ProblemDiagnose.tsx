@@ -122,14 +122,27 @@ const SEVERITY_COLORS = {
 };
 
 export function ProblemDiagnose() {
+  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
 
   return (
-    <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
-      <div style={{ fontWeight: 700, color: "#0369a1", marginBottom: 4, fontSize: "0.95rem" }}>
-        🔍 Problem-Diagnose
-      </div>
-      <div style={{ fontSize: "0.75rem", color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
+    <div style={{ background: "white", borderRadius: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14, overflow: "hidden" }}>
+      <button
+        onClick={() => setExpanded(v => !v)}
+        style={{
+          width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: "none", border: "none", padding: "14px 18px", cursor: "pointer",
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0369a1" }}>
+          🔍 Problem-Diagnose
+        </span>
+        <span style={{ color: "#94a3b8", fontSize: "0.85rem", transition: "transform 0.2s", display: "inline-block", transform: expanded ? "rotate(180deg)" : "none" }}>▼</span>
+      </button>
+
+      {expanded && (
+      <div style={{ padding: "0 14px 14px", borderTop: "1px solid #f1f5f9" }}>
+      <div style={{ fontSize: "0.72rem", color: "#64748b", margin: "10px 0 12px", lineHeight: 1.5 }}>
         Symptom antippen → Ursache und Maßnahmen
       </div>
 
@@ -191,6 +204,8 @@ export function ProblemDiagnose() {
           );
         })}
       </div>
+      </div>
+      )}
     </div>
   );
 }

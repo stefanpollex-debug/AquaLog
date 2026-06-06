@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -71,7 +74,7 @@ export default function App() {
 
   const canSave = touched.cl && touched.ph && touched.temp;
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!canSave) return;
     addEntry({
       date: form.date,
@@ -95,6 +98,10 @@ export default function App() {
     setChemicals([]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
+    // Haptisches Feedback: Erfolg
+    if (Capacitor.isNativePlatform()) {
+      await Haptics.notification({ type: NotificationType.Success });
+    }
   };
 
   const last          = entries[0];
@@ -107,40 +114,50 @@ export default function App() {
     waterChange.record.intervalDays
   ) === "danger";
 
-  // Push-Notification: Filterpflege
-  useEffect(() => {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
+  // ── Unified local-notification helper (native + web) ──────────────────────
+  const notify = useCallback(async (id: number, storageKey: string, body: string) => {
     const today = new Date().toISOString().slice(0, 10);
-    const notify = (storageKey: string, body: string) => {
-      if (localStorage.getItem(storageKey) === today) return;
+    if (localStorage.getItem(storageKey) === today) return;
+    localStorage.setItem(storageKey, today);
+
+    if (Capacitor.isNativePlatform()) {
+      const perm = await LocalNotifications.requestPermissions();
+      if (perm.display !== "granted") return;
+      await LocalNotifications.schedule({
+        notifications: [{
+          id,
+          title: "AquaLog",
+          body,
+          schedule: { at: new Date(Date.now() + 500) },
+          smallIcon: "ic_stat_icon_config_sample",
+          iconColor: "#0369a1",
+        }],
+      });
+    } else if ("Notification" in window && Notification.permission === "granted") {
       new Notification("Pool Bericht", { body, icon: "/favicon.svg" });
-      localStorage.setItem(storageKey, today);
-    };
+    }
+  }, []);
+
+  // Filterpflege-Erinnerung
+  useEffect(() => {
     if (filterLog.lastClean) {
       const d = daysSinceEntry(filterLog.lastClean);
       if (d >= filterLog.settings.cleanIntervalDays)
-        notify("filterCleanNotified", `🧽 Filterreinigung fällig — letzter Termin vor ${d} Tagen`);
+        notify(101, "filterCleanNotified", `🧽 Filterreinigung fällig — letzter Termin vor ${d} Tagen`);
     }
     if (filterLog.lastReplace) {
       const d = daysSinceEntry(filterLog.lastReplace);
       if (d >= filterLog.settings.replaceIntervalDays)
-        notify("filterReplaceNotified", `🔄 Filterwechsel empfohlen — letzter Wechsel vor ${d} Tagen`);
+        notify(102, "filterReplaceNotified", `🔄 Filterwechsel empfohlen — letzter Wechsel vor ${d} Tagen`);
     }
-  }, [filterLog.lastClean, filterLog.lastReplace, filterLog.settings]);
+  }, [filterLog.lastClean, filterLog.lastReplace, filterLog.settings, notify]);
 
-  // Push-Notification für Wasserwechsel (beim App-Öffnen, max. 1× pro Tag)
+  // Wasserwechsel-Erinnerung
   useEffect(() => {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const daysSince = daysSinceLastAddition(waterChange.record);
-    if (daysSince === null || daysSince < waterChange.record.intervalDays) return;
-    const today = new Date().toISOString().slice(0, 10);
-    if (localStorage.getItem("waterChangeNotified") === today) return;
-    new Notification("Pool Bericht", {
-      body: `💧 Teilwasserwechsel fällig — letzter Eintrag vor ${daysSince} Tagen`,
-      icon: "/favicon.svg",
-    });
-    localStorage.setItem("waterChangeNotified", today);
-  }, [waterChange.record]);
+    const d = daysSinceLastAddition(waterChange.record);
+    if (d !== null && d >= waterChange.record.intervalDays)
+      notify(103, "waterChangeNotified", `💧 Teilwasserwechsel fällig — letzter Eintrag vor ${d} Tagen`);
+  }, [waterChange.record, notify]);
 
   const poolTips = last
     ? (["cl", "ph", "temp", "kh", "gh"] as FieldKey[])
@@ -277,7 +294,7 @@ export default function App() {
               hinweise:"Tipps",
             };
             return (
-              <button key={t} onClick={() => setTab(t)} style={{
+              <button key={t} onClick={() => { setTab(t); if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Light }); }} style={{
                 flex: 1, padding: "11px 2px", border: "none", background: "none", cursor: "pointer",
                 fontWeight: tab === t ? 700 : 500, fontSize: "0.74rem",
                 color: tab === t ? "#0369a1" : "#64748b",
@@ -657,7 +674,7 @@ export default function App() {
       {deleteTarget && (
         <DeleteConfirm
           entry={deleteTarget}
-          onConfirm={() => { deleteEntry(deleteTarget.id); setDeleteTarget(null); }}
+          onConfirm={() => { deleteEntry(deleteTarget.id); setDeleteTarget(null); if (Capacitor.isNativePlatform()) Haptics.notification({ type: NotificationType.Warning }); }}
           onCancel={() => setDeleteTarget(null)}
         />
       )}
