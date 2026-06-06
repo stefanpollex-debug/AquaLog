@@ -17,7 +17,7 @@ interface Props {
   onResult: (vals: { cl: number; ph: number; temp: number | null }) => void;
 }
 
-type State = "idle" | "loading" | "result" | "error";
+type State = "idle" | "context" | "loading" | "result" | "error";
 
 const CONFIDENCE_LABEL: Record<string, string> = {
   high:   "🟢 Hoch",
@@ -25,17 +25,42 @@ const CONFIDENCE_LABEL: Record<string, string> = {
   low:    "🔴 Niedrig",
 };
 
-export function PhotoScanner({ onResult }: Props) {
-  const [state, setState]     = useState<State>("idle");
-  const [preview, setPreview] = useState<string | null>(null);
-  const [aiResult, setAi]     = useState<AiResult | null>(null);
-  const [errMsg, setErrMsg]   = useState("");
-  const inputRef              = useRef<HTMLInputElement>(null);
-  const abortRef              = useRef<AbortController | null>(null);
+// ─── Kontext-Chips ────────────────────────────────────────────────────────────
+interface Chip { id: string; emoji: string; label: string; context: string; }
+const CHIPS: Chip[] = [
+  { id: "genutzt",    emoji: "🏊", label: "Genutzt",       context: "Pool wurde heute genutzt" },
+  { id: "abgedeckt",  emoji: "🌂", label: "Abgedeckt",     context: "Pool war abgedeckt" },
+  { id: "sonnig",     emoji: "☀️", label: "Sonnig",         context: "starke Sonneneinstrahlung" },
+  { id: "regen",      emoji: "🌧️", label: "Regen",          context: "Regen / Niederschlag" },
+  { id: "sonnencreme",emoji: "🧴", label: "Sonnencreme",    context: "Badegäste haben Sonnencreme verwendet" },
+  { id: "chemikalie", emoji: "⚗️", label: "Chemikalie",     context: "Chemikalie wurde vor der Messung zugegeben" },
+];
 
-  // ─── Core analysis (shared by both native + web paths) ──────────────────────
-  const runAnalysis = async (b64: string, mt: string, previewUrl: string) => {
-    setPreview(previewUrl);
+export function PhotoScanner({ onResult }: Props) {
+  const [state, setState]         = useState<State>("idle");
+  const [preview, setPreview]     = useState<string | null>(null);
+  const [pendingB64, setPendingB64] = useState<{ b64: string; mt: string } | null>(null);
+  const [aiResult, setAi]         = useState<AiResult | null>(null);
+  const [errMsg, setErrMsg]       = useState("");
+  const [chips, setChips]         = useState<Set<string>>(new Set());
+  const [freeText, setFreeText]   = useState("");
+  const inputRef                  = useRef<HTMLInputElement>(null);
+  const abortRef                  = useRef<AbortController | null>(null);
+
+  const toggleChip = (id: string) =>
+    setChips(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  // ─── Kontext-String für die API ──────────────────────────────────────────────
+  const buildContext = () => {
+    const parts = [
+      ...CHIPS.filter(c => chips.has(c.id)).map(c => c.context),
+      freeText.trim(),
+    ].filter(Boolean);
+    return parts.length ? `Zusätzlicher Kontext: ${parts.join(", ")}.` : "";
+  };
+
+  // ─── Core analysis ───────────────────────────────────────────────────────────
+  const runAnalysis = async (b64: string, mt: string, contextStr: string) => {
     setState("loading");
     setAi(null);
 
@@ -60,15 +85,17 @@ Teststreifen-Farbskala:
 
 Thermometer: Lies die angezeigte Temperatur in Grad Celsius ab. Falls kein Thermometer sichtbar, setze "temp": null.
 
+Berücksichtige den zusätzlichen Kontext bei der Einschätzung der Messwerte und der notes.
+
 Antworte NUR mit JSON ohne Backticks:
-{"cl":<Zahl>,"ph":<Zahl>,"temp":<Zahl oder null>,"confidence":"low|medium|high","notes":"<kurze Beschreibung was du siehst>"}
+{"cl":<Zahl>,"ph":<Zahl>,"temp":<Zahl oder null>,"confidence":"low|medium|high","notes":"<kurze Beschreibung was du siehst und was der Kontext bedeutet>"}
 
 Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
           messages: [{
             role:    "user",
             content: [
               { type: "image", source: { type: "base64", media_type: mt, data: b64 } },
-              { type: "text",  text:   "Analysiere Teststreifen und Thermometer (falls vorhanden) auf diesem Foto." },
+              { type: "text",  text: `Analysiere Teststreifen und Thermometer (falls vorhanden) auf diesem Foto. ${contextStr}`.trim() },
             ],
           }],
         }),
@@ -96,7 +123,15 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
     }
   };
 
-  // ─── Native path (Capacitor iOS / Android) ──────────────────────────────────
+  // ─── Foto aufnehmen → Kontext-Step ───────────────────────────────────────────
+  const goToContext = (b64: string, mt: string, previewUrl: string) => {
+    setPreview(previewUrl);
+    setPendingB64({ b64, mt });
+    setChips(new Set());
+    setFreeText("");
+    setState("context");
+  };
+
   const takePhotoNative = async () => {
     try {
       const perms = await Camera.requestPermissions({ permissions: ["camera"] });
@@ -105,64 +140,50 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
         setErrMsg("Kamera-Zugriff verweigert. Bitte in den Einstellungen erlauben.");
         return;
       }
-
       const photo = await Camera.getPhoto({
-        quality:      90,
-        allowEditing: false,
-        resultType:   CameraResultType.Base64,
-        source:       CameraSource.Camera,
+        quality: 90, allowEditing: false,
+        resultType: CameraResultType.Base64, source: CameraSource.Camera,
       });
-
-      if (!photo.base64String) {
-        setState("error"); setErrMsg("Kein Bild erhalten."); return;
-      }
-
-      // Capacitor liefert reines Base64 (kein Prefix) — sicherheitshalber abschneiden falls doch vorhanden
+      if (!photo.base64String) { setState("error"); setErrMsg("Kein Bild erhalten."); return; }
       const base64Data  = photo.base64String ?? "";
       const cleanBase64 = base64Data.includes(",") ? base64Data.split(",")[1] : base64Data;
-
-      const mt         = `image/${photo.format ?? "jpeg"}`;
-      const previewUrl = `data:${mt};base64,${cleanBase64}`;
-      await runAnalysis(cleanBase64, mt, previewUrl);
+      const mt          = `image/${photo.format ?? "jpeg"}`;
+      goToContext(cleanBase64, mt, `data:${mt};base64,${cleanBase64}`);
     } catch (err) {
-      // User cancelled — silently return to idle
       if (String(err).includes("cancelled") || String(err).includes("canceled")) return;
       setState("error");
       setErrMsg(`Kamera-Fehler: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
-  // ─── Web / PWA fallback path ─────────────────────────────────────────────────
   const analyseFile = (file: File | null | undefined) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (ev) => {
+    reader.onload = (ev) => {
       const dataUrl = ev.target!.result as string;
-      await runAnalysis(dataUrl.split(",")[1], file.type || "image/jpeg", dataUrl);
+      goToContext(dataUrl.split(",")[1], file.type || "image/jpeg", dataUrl);
     };
     reader.readAsDataURL(file);
   };
 
-  // ─── Unified trigger ─────────────────────────────────────────────────────────
-  const openCamera = () => {
-    if (Capacitor.isNativePlatform()) {
-      takePhotoNative();
-    } else {
-      inputRef.current?.click();
-    }
+  const openCamera = () =>
+    Capacitor.isNativePlatform() ? takePhotoNative() : inputRef.current?.click();
+
+  const startAnalysis = () => {
+    if (!pendingB64) return;
+    runAnalysis(pendingB64.b64, pendingB64.mt, buildContext());
   };
 
   const accept = () => {
     if (!aiResult) return;
     onResult({ cl: aiResult.cl, ph: aiResult.ph, temp: aiResult.temp });
-    setState("idle"); setPreview(null); setAi(null);
+    setState("idle"); setPreview(null); setAi(null); setPendingB64(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
   const reset = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setState("idle"); setPreview(null); setAi(null);
+    abortRef.current?.abort(); abortRef.current = null;
+    setState("idle"); setPreview(null); setAi(null); setPendingB64(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -175,26 +196,16 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
         📸 KI-Fotoauswertung
       </div>
 
-      {/* Web fallback — hidden on native (never triggered) */}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style={{ display: "none" }}
-        onChange={(e) => analyseFile(e.target.files?.[0])}
-      />
+      <input ref={inputRef} type="file" accept="image/*" capture="environment"
+        style={{ display: "none" }} onChange={(e) => analyseFile(e.target.files?.[0])} />
 
+      {/* ── IDLE ── */}
       {state === "idle" && (
-        <div
-          onClick={openCamera}
+        <div onClick={openCamera}
           onDrop={(e) => { e.preventDefault(); analyseFile(e.dataTransfer.files[0]); }}
           onDragOver={(e) => e.preventDefault()}
-          style={{
-            border: "2px dashed #bae6fd", borderRadius: 14, padding: "22px 16px",
-            textAlign: "center", cursor: "pointer", background: "#f0f9ff",
-          }}
-        >
+          style={{ border: "2px dashed #bae6fd", borderRadius: 14, padding: "22px 16px",
+            textAlign: "center", cursor: "pointer", background: "#f0f9ff" }}>
           <div style={{ fontSize: "2rem" }}>📷</div>
           <div style={{ fontWeight: 600, color: "#0369a1", marginTop: 6, fontSize: "0.9rem" }}>
             Teststreifen fotografieren
@@ -205,6 +216,81 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
         </div>
       )}
 
+      {/* ── KONTEXT ── */}
+      {state === "context" && (
+        <div style={{ background: "white", borderRadius: 14, border: "1.5px solid #bae6fd", overflow: "hidden" }}>
+          {preview && (
+            <img src={preview} alt="Vorschau"
+              style={{ width: "100%", maxHeight: 130, objectFit: "cover" }} />
+          )}
+          <div style={{ padding: "14px 14px 0" }}>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#0369a1", marginBottom: 10 }}>
+              Was war heute los? <span style={{ fontWeight: 400, color: "#94a3b8" }}>(optional)</span>
+            </div>
+
+            {/* Chips */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
+              {CHIPS.map(c => {
+                const active = chips.has(c.id);
+                return (
+                  <button key={c.id} type="button" onClick={() => toggleChip(c.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 5,
+                      padding: "6px 11px", borderRadius: 20, cursor: "pointer",
+                      border: `1.5px solid ${active ? "#0369a1" : "#e2e8f0"}`,
+                      background: active ? "#e0f2fe" : "white",
+                      color: active ? "#0369a1" : "#64748b",
+                      fontWeight: active ? 700 : 500, fontSize: "0.8rem",
+                      transition: "all 0.15s",
+                    }}>
+                    <span>{c.emoji}</span> {c.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Freitext */}
+            <textarea
+              value={freeText}
+              onChange={(e) => setFreeText(e.target.value)}
+              placeholder="Sonstiges… z.B. starker Wind, viele Badegäste, pH-Minus zugegeben"
+              rows={2}
+              style={{
+                width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10,
+                padding: "9px 11px", fontSize: "0.82rem", resize: "none",
+                fontFamily: "inherit", color: "#374151", boxSizing: "border-box",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          {/* Aktions-Buttons */}
+          <div style={{ padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <button onClick={startAnalysis}
+              style={{ padding: "11px", background: "linear-gradient(90deg,#0369a1,#0ea5e9)",
+                color: "white", border: "none", borderRadius: 10, fontWeight: 700,
+                cursor: "pointer", fontSize: "0.9rem" }}>
+              🔍 Jetzt analysieren
+            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={retake}
+                style={{ flex: 1, padding: "8px", background: "#f8fafc",
+                  border: "1.5px solid #e2e8f0", borderRadius: 10, cursor: "pointer",
+                  fontWeight: 600, color: "#475569", fontSize: "0.82rem" }}>
+                📷 Neu
+              </button>
+              <button onClick={reset}
+                style={{ flex: 1, padding: "8px", background: "#f8fafc",
+                  border: "1.5px solid #e2e8f0", borderRadius: 10, cursor: "pointer",
+                  fontWeight: 600, color: "#475569", fontSize: "0.82rem" }}>
+                ✕ Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── LOADING ── */}
       {state === "loading" && (
         <div style={{ background: "#f0f9ff", borderRadius: 14, padding: 20, textAlign: "center" }}>
           {preview && (
@@ -214,20 +300,25 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
           <style>{`@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
           <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 8 }}>
             {[0, 1, 2].map((i) => (
-              <div key={i} style={{
-                width: 10, height: 10, borderRadius: "50%", background: "#0ea5e9",
-                animation: `bounce 1s ease ${i * 0.2}s infinite`,
-              }} />
+              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: "#0ea5e9",
+                animation: `bounce 1s ease ${i * 0.2}s infinite` }} />
             ))}
           </div>
           <div style={{ fontWeight: 600, color: "#0369a1", fontSize: "0.9rem" }}>KI analysiert Teststreifen…</div>
-          <button
-            onClick={reset}
-            style={{ marginTop: 12, padding: "7px 20px", background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.82rem" }}
-          >✕ Abbrechen</button>
+          {chips.size > 0 || freeText ? (
+            <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 6 }}>
+              Kontext wird berücksichtigt
+            </div>
+          ) : null}
+          <button onClick={reset}
+            style={{ marginTop: 12, padding: "7px 20px", background: "#f1f5f9", color: "#64748b",
+              border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.82rem" }}>
+            ✕ Abbrechen
+          </button>
         </div>
       )}
 
+      {/* ── RESULT ── */}
       {state === "result" && aiResult && (
         <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: 16 }}>
           {preview && (
@@ -260,36 +351,44 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
             Konfidenz: {CONFIDENCE_LABEL[aiResult.confidence]}
           </div>
           {aiResult.temp == null && (
-            <div style={{ background: "#fef9c3", borderRadius: 8, padding: "8px 12px", fontSize: "0.78rem", color: "#713f12", marginBottom: 12 }}>
+            <div style={{ background: "#fef9c3", borderRadius: 8, padding: "8px 12px",
+              fontSize: "0.78rem", color: "#713f12", marginBottom: 12 }}>
               🌡️ Kein Thermometer erkannt – bitte Temperatur per Schieberegler einstellen.
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <button
-              onClick={accept}
-              style={{ padding: "10px", background: "linear-gradient(90deg,#15803d,#22c55e)", color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: "0.9rem" }}
-            >✓ Werte übernehmen</button>
-            <button
-              onClick={retake}
-              style={{ padding: "9px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, cursor: "pointer", fontWeight: 600, color: "#475569", fontSize: "0.85rem" }}
-            >📷 Neu fotografieren</button>
+            <button onClick={accept}
+              style={{ padding: "10px", background: "linear-gradient(90deg,#15803d,#22c55e)",
+                color: "white", border: "none", borderRadius: 10, fontWeight: 700,
+                cursor: "pointer", fontSize: "0.9rem" }}>
+              ✓ Werte übernehmen
+            </button>
+            <button onClick={retake}
+              style={{ padding: "9px", background: "#f8fafc", border: "1.5px solid #e2e8f0",
+                borderRadius: 10, cursor: "pointer", fontWeight: 600, color: "#475569", fontSize: "0.85rem" }}>
+              📷 Neu fotografieren
+            </button>
           </div>
         </div>
       )}
 
+      {/* ── ERROR ── */}
       {state === "error" && (
-        <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 14, padding: 16, textAlign: "center" }}>
+        <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 14,
+          padding: 16, textAlign: "center" }}>
           <div style={{ fontSize: "1.5rem" }}>😕</div>
           <div style={{ fontWeight: 600, color: "#991b1b", margin: "8px 0 4px", fontSize: "0.88rem" }}>{errMsg}</div>
           <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "center" }}>
-            <button
-              onClick={retake}
-              style={{ padding: "8px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}
-            >📷 Erneut fotografieren</button>
-            <button
-              onClick={reset}
-              style={{ padding: "8px 14px", background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}
-            >✕</button>
+            <button onClick={retake}
+              style={{ padding: "8px 20px", background: "#ef4444", color: "white",
+                border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>
+              📷 Erneut fotografieren
+            </button>
+            <button onClick={reset}
+              style={{ padding: "8px 14px", background: "#f1f5f9", color: "#64748b",
+                border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>
+              ✕
+            </button>
           </div>
         </div>
       )}
