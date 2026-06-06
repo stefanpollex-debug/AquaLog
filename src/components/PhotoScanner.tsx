@@ -134,25 +134,42 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
 
   const takePhotoNative = async () => {
     try {
+      // Berechtigungen prüfen — "prompt" bedeutet noch nicht entschieden, auch OK
       const perms = await Camera.requestPermissions({ permissions: ["camera"] });
       if (perms.camera === "denied") {
         setState("error");
-        setErrMsg("Kamera-Zugriff verweigert. Bitte in den Einstellungen erlauben.");
+        setErrMsg("Kamera-Zugriff verweigert. Bitte in den Einstellungen → AquaLog → Kamera aktivieren.");
         return;
       }
+
+      // DataUrl statt Base64: zuverlässiger auf iOS (kein HEIC-Problem, kein Pattern-Fehler)
       const photo = await Camera.getPhoto({
-        quality: 90, allowEditing: false,
-        resultType: CameraResultType.Base64, source: CameraSource.Camera,
+        quality:            85,
+        allowEditing:       false,
+        resultType:         CameraResultType.DataUrl,
+        source:             CameraSource.Camera,
+        saveToGallery:      false,
+        correctOrientation: true,
+        // JPEG erzwingen — Claude API unterstützt kein HEIC
+        webUseInput:        false,
       });
-      if (!photo.base64String) { setState("error"); setErrMsg("Kein Bild erhalten."); return; }
-      const base64Data  = photo.base64String ?? "";
-      const cleanBase64 = base64Data.includes(",") ? base64Data.split(",")[1] : base64Data;
-      const mt          = `image/${photo.format ?? "jpeg"}`;
-      goToContext(cleanBase64, mt, `data:${mt};base64,${cleanBase64}`);
+
+      if (!photo.dataUrl) { setState("error"); setErrMsg("Kein Bild erhalten."); return; }
+
+      // dataUrl hat Format: "data:image/jpeg;base64,<data>"
+      const dataUrl     = photo.dataUrl;
+      const mt          = dataUrl.split(";")[0].split(":")[1] || "image/jpeg";
+      const cleanBase64 = dataUrl.split(",")[1] ?? "";
+
+      if (!cleanBase64) { setState("error"); setErrMsg("Bild konnte nicht verarbeitet werden."); return; }
+
+      goToContext(cleanBase64, mt, dataUrl);
     } catch (err) {
-      if (String(err).includes("cancelled") || String(err).includes("canceled")) return;
+      const msg = err instanceof Error ? err.message : String(err);
+      // Abgebrochen vom Nutzer → still zurück zu idle
+      if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("abbruch")) return;
       setState("error");
-      setErrMsg(`Kamera-Fehler: ${err instanceof Error ? err.message : String(err)}`);
+      setErrMsg(`Kamera-Fehler: ${msg}`);
     }
   };
 
