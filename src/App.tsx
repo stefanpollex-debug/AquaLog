@@ -1,7 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { Capacitor } from "@capacitor/core";
-import { LocalNotifications } from "@capacitor/local-notifications";
-import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -98,10 +95,6 @@ export default function App() {
     setChemicals([]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
-    // Haptisches Feedback: Erfolg
-    if (Capacitor.isNativePlatform()) {
-      await Haptics.notification({ type: NotificationType.Success });
-    }
   };
 
   const last          = entries[0];
@@ -114,27 +107,13 @@ export default function App() {
     waterChange.record.intervalDays
   ) === "danger";
 
-  // ── Unified local-notification helper (native + web) ──────────────────────
-  const notify = useCallback(async (id: number, storageKey: string, body: string) => {
+  // ── Browser-Benachrichtigungen (PWA) ─────────────────────────────────────
+  const notify = useCallback((_id: number, storageKey: string, body: string) => {
     const today = new Date().toISOString().slice(0, 10);
     if (localStorage.getItem(storageKey) === today) return;
     localStorage.setItem(storageKey, today);
-
-    if (Capacitor.isNativePlatform()) {
-      const perm = await LocalNotifications.requestPermissions();
-      if (perm.display !== "granted") return;
-      await LocalNotifications.schedule({
-        notifications: [{
-          id,
-          title: "AquaLog",
-          body,
-          schedule: { at: new Date(Date.now() + 500) },
-          smallIcon: "ic_stat_icon_config_sample",
-          iconColor: "#0369a1",
-        }],
-      });
-    } else if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("Pool Bericht", { body, icon: "/favicon.svg" });
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("AquaLog", { body, icon: "/apple-touch-icon.png" });
     }
   }, []);
 
@@ -294,7 +273,7 @@ export default function App() {
               hinweise:"Tipps",
             };
             return (
-              <button key={t} onClick={() => { setTab(t); if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Light }); }} style={{
+              <button key={t} onClick={() => setTab(t)} style={{
                 flex: 1, padding: "11px 2px", border: "none", background: "none", cursor: "pointer",
                 fontWeight: tab === t ? 700 : 500, fontSize: "0.74rem",
                 color: tab === t ? "#0369a1" : "#64748b",
@@ -674,7 +653,7 @@ export default function App() {
       {deleteTarget && (
         <DeleteConfirm
           entry={deleteTarget}
-          onConfirm={() => { deleteEntry(deleteTarget.id); setDeleteTarget(null); if (Capacitor.isNativePlatform()) Haptics.notification({ type: NotificationType.Warning }); }}
+          onConfirm={() => { deleteEntry(deleteTarget.id); setDeleteTarget(null); }}
           onCancel={() => setDeleteTarget(null)}
         />
       )}

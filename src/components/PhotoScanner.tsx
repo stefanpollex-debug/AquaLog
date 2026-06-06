@@ -1,6 +1,4 @@
 import { useState, useRef } from "react";
-import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
-import { Capacitor } from "@capacitor/core";
 import { API_BASE } from "../utils/api";
 import { getStatus } from "../utils/status";
 import { StatusBadge } from "./StatusBadge";
@@ -102,15 +100,31 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
       });
       clearTimeout(timeoutId);
 
-      const data = await res.json();
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        setState("error"); setErrMsg(`Antwort kein JSON (HTTP ${res.status})`); return;
+      }
+      const d = data as Record<string, unknown>;
       if (!res.ok) {
-        const apiErr = data?.error?.message ?? data?.error?.type ?? `HTTP ${res.status}`;
+        const apiErr = (d?.error as Record<string,string>)?.message
+          ?? (d?.error as Record<string,string>)?.type
+          ?? `HTTP ${res.status}`;
         setState("error"); setErrMsg(`API-Fehler: ${apiErr}`); return;
       }
-      const text   = (data.content?.find((b: { type: string }) => b.type === "text") as { text: string } | undefined)?.text ?? "";
-      const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-      if (parsed.error) { setState("error"); setErrMsg(parsed.error); return; }
-      setAi(parsed);
+      const content = d.content as Array<{ type: string; text?: string }> | undefined;
+      const text    = content?.find(b => b.type === "text")?.text ?? "";
+      if (!text) { setState("error"); setErrMsg("Leere Antwort von KI erhalten."); return; }
+
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+      } catch {
+        setState("error"); setErrMsg(`KI-Antwort kein gültiges JSON: ${text.slice(0, 80)}`); return;
+      }
+      if (parsed.error) { setState("error"); setErrMsg(parsed.error as string); return; }
+      setAi(parsed as unknown as AiResult);
       setState("result");
     } catch (err) {
       clearTimeout(timeoutId);
@@ -118,8 +132,10 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
         if (timedOut) { setState("error"); setErrMsg("Zeitüberschreitung – bitte erneut versuchen."); }
         return;
       }
+      const msg = err instanceof Error ? err.message : String(err);
       setState("error");
-      setErrMsg(`Fehler: ${err instanceof Error ? err.message : String(err)}`);
+      // Zeige präzise Fehlerquelle für einfacheres Debugging
+      setErrMsg(`Netzwerkfehler: ${msg}`);
     }
   };
 
@@ -132,59 +148,44 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
     setState("context");
   };
 
-  const takePhotoNative = async () => {
-    try {
-      // Berechtigungen prüfen — "prompt" bedeutet noch nicht entschieden, auch OK
-      const perms = await Camera.requestPermissions({ permissions: ["camera"] });
-      if (perms.camera === "denied") {
-        setState("error");
-        setErrMsg("Kamera-Zugriff verweigert. Bitte in den Einstellungen → AquaLog → Kamera aktivieren.");
-        return;
-      }
-
-      // DataUrl statt Base64: zuverlässiger auf iOS (kein HEIC-Problem, kein Pattern-Fehler)
-      const photo = await Camera.getPhoto({
-        quality:            85,
-        allowEditing:       false,
-        resultType:         CameraResultType.DataUrl,
-        source:             CameraSource.Camera,
-        saveToGallery:      false,
-        correctOrientation: true,
-        // JPEG erzwingen — Claude API unterstützt kein HEIC
-        webUseInput:        false,
-      });
-
-      if (!photo.dataUrl) { setState("error"); setErrMsg("Kein Bild erhalten."); return; }
-
-      // dataUrl hat Format: "data:image/jpeg;base64,<data>"
-      const dataUrl     = photo.dataUrl;
-      const mt          = dataUrl.split(";")[0].split(":")[1] || "image/jpeg";
-      const cleanBase64 = dataUrl.split(",")[1] ?? "";
-
-      if (!cleanBase64) { setState("error"); setErrMsg("Bild konnte nicht verarbeitet werden."); return; }
-
-      goToContext(cleanBase64, mt, dataUrl);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // Abgebrochen vom Nutzer → still zurück zu idle
-      if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("abbruch")) return;
-      setState("error");
-      setErrMsg(`Kamera-Fehler: ${msg}`);
-    }
-  };
 
   const analyseFile = (file: File | null | undefined) => {
     if (!file) return;
+
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target!.result as string;
-      goToContext(dataUrl.split(",")[1], file.type || "image/jpeg", dataUrl);
+    reader.onerror = () => { setState("error"); setErrMsg("Bild konnte nicht gelesen werden."); };
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+
+      // Canvas-Konvertierung → immer JPEG, egal ob HEIC, PNG oder anderes Format
+      const img = new Image();
+      img.onerror = () => { setState("error"); setErrMsg("Bild konnte nicht geladen werden."); };
+      img.onload  = () => {
+        // Max. 1600px — reduziert Dateigröße ohne Qualitätsverlust für Teststreifen-Analyse
+        const MAX   = 1600;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w     = Math.round(img.width  * scale);
+        const h     = Math.round(img.height * scale);
+
+        const canvas = document.createElement("canvas");
+        canvas.width  = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { setState("error"); setErrMsg("Canvas nicht verfügbar."); return; }
+
+        ctx.drawImage(img, 0, 0, w, h);
+        const jpegUrl = canvas.toDataURL("image/jpeg", 0.88);
+        const base64  = jpegUrl.split(",")[1] ?? "";
+
+        if (!base64) { setState("error"); setErrMsg("Konvertierung fehlgeschlagen."); return; }
+        goToContext(base64, "image/jpeg", jpegUrl);
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
 
-  const openCamera = () =>
-    Capacitor.isNativePlatform() ? takePhotoNative() : inputRef.current?.click();
+  const openCamera = () => inputRef.current?.click();
 
   const startAnalysis = () => {
     if (!pendingB64) return;

@@ -7,30 +7,37 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
+      includeAssets: ["favicon.svg", "apple-touch-icon.png", "pwa-192.png", "pwa-512.png"],
       manifest: {
-        name: "Pool Pflege-Bericht",
-        short_name: "Pool Bericht",
-        description: "Chlor, pH und Temperatur deines Home Deluxe Spa DROP erfassen und auswerten",
+        name: "AquaLog",
+        short_name: "AquaLog",
+        description: "Pool-Wasseranalyse: Chlor, pH, Temperatur erfassen und mit KI auswerten",
         theme_color: "#0369a1",
-        background_color: "#e0f2fe",
+        background_color: "#0369a1",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
         start_url: "/",
+        lang: "de",
         icons: [
           { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
           { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
-          { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
         runtimeCaching: [
+          // API-Calls nie cachen
           {
-            urlPattern: /^https:\/\/api\.anthropic\.com\/.*/i,
+            urlPattern: /\/api\/anthropic/i,
+            handler: "NetworkOnly",
+          },
+          // Wetter-API nie cachen
+          {
+            urlPattern: /api\.open-meteo\.com/i,
             handler: "NetworkOnly",
           },
         ],
