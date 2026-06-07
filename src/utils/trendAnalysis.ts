@@ -1,6 +1,7 @@
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { LIMITS, type FieldKey } from "./constants";
 import { getStatus } from "./status";
+import { minChlorByTemp, retestIntervalByTemp, formatRetestIn } from "./contextualRisk";
 
 // ── Öffentliche Typen ─────────────────────────────────────────────
 
@@ -335,15 +336,55 @@ export function analyzeTrends(entries: PoolEntry[]): TrendResult[] {
     if (r) results.push(r);
   }
 
-  // 3. Regen-Korrelation
+  // 3. Kontextuelle Temperatur-Chlor-Bewertung (überschreibt isolierte Ampel)
+  const latestEntry = entries[0];
+  if (latestEntry) {
+    const temp   = latestEntry.temp;
+    const cl     = latestEntry.cl;
+    const minCl  = minChlorByTemp(temp);
+    const retest = formatRetestIn(retestIntervalByTemp(temp));
+
+    if (temp >= 35 && cl < 1.5) {
+      results.push({
+        id: "legionella_risk",
+        type: "value_trend",
+        severity: "danger",
+        icon: "🦠",
+        title: "Legionellen-Risiko",
+        message: `Bei ${temp.toFixed(0)}°C muss Chlor ≥ 1,5 mg/l betragen (aktuell ${cl.toFixed(2)} mg/l). Spa nicht benutzen.`,
+        action: "Chlor sofort erhöhen",
+      });
+    } else if (temp > 30 && cl < minCl) {
+      results.push({
+        id: "temp_cl_low",
+        type: "value_trend",
+        severity: temp > 34 ? "danger" : "warning",
+        icon: "🌡️",
+        title: "Chlor bei hoher Temperatur zu niedrig",
+        message: `Bei ${temp.toFixed(0)}°C mindestens ${minCl.toFixed(1)} mg/l Chlor nötig (aktuell ${cl.toFixed(2)} mg/l). Nächste Messung in ${retest}.`,
+        action: `Chlor auf ≥ ${minCl.toFixed(1)} mg/l erhöhen`,
+      });
+    } else if (temp > 30) {
+      results.push({
+        id: "temp_retest",
+        type: "value_trend",
+        severity: "info",
+        icon: "⏱",
+        title: `Nachmessintervall bei ${temp.toFixed(0)}°C`,
+        message: `Bei dieser Temperatur baut sich Chlor schnell ab — nächste Messung in ${retest} empfohlen.`,
+      });
+    }
+  }
+
+  // 4. Regen-Korrelation
   const rain = analyzeRainCorrelation(entries);
   if (rain) results.push(rain);
 
-  // 4. Benutzungs-Korrelation
+  // 5. Benutzungs-Korrelation
   const usage = analyzeUsageCorrelation(entries);
   if (usage) results.push(usage);
 
-  // 5. Wochenmuster
+  // 6. Wochenmuster
   const weekly = analyzeWeeklyPattern(entries);
   if (weekly) results.push(weekly);
 

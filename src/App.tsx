@@ -11,6 +11,7 @@ import { LIMITS, STALE_DAYS, type FieldKey } from "./utils/constants";
 import { getStatus, daysSince }              from "./utils/status";
 import { getTipWithDose }                    from "./utils/dosage";
 import { getWeatherPoolHints, getWmoIcon }   from "./utils/weather";
+import { assessRisk, formatRetestIn }        from "./utils/contextualRisk";
 
 import { PhotoScanner }      from "./components/PhotoScanner";
 import { ValueSlider }       from "./components/ValueSlider";
@@ -99,6 +100,7 @@ export default function App() {
   };
 
   const last          = entries[0];
+  const riskAssessment = last ? assessRisk(last, entries) : null;
   const chartData     = [...entries].reverse().slice(-20);
   const daysSinceLast = last ? daysSince(last.date) : null;
   const staleWarn     = daysSinceLast !== null && daysSinceLast >= STALE_DAYS;
@@ -201,15 +203,48 @@ export default function App() {
                 {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => {
                   const val = last[k as keyof typeof last] as number | undefined;
                   if (val == null) return null;
+                  const isTempHigh = k === "temp" && typeof val === "number" && val > 32;
                   return (
-                    <div key={k} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px", fontSize: "0.75rem" }}>
+                    <div key={k} style={{
+                      background: isTempHigh ? "rgba(220,38,38,0.45)" : "rgba(255,255,255,0.15)",
+                      borderRadius: 10, padding: "5px 10px", fontSize: "0.75rem",
+                      border: isTempHigh ? "1px solid rgba(255,100,100,0.6)" : "none",
+                    }}>
                       <span style={{ opacity: 0.8 }}>{LIMITS[k].label}: </span>
                       <b>{val.toFixed(k === "kh" || k === "gh" ? 0 : 1)}{LIMITS[k].unit}</b>
+                      {isTempHigh && <span style={{ marginLeft: 3 }}>🔥</span>}
                       <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, val)} /></span>
                     </div>
                   );
                 })}
               </div>
+
+              {/* Gesamtrisiko-Ampel */}
+              {riskAssessment && (
+                <div style={{
+                  marginTop: 10,
+                  background: riskAssessment.overallRisk === "danger"  ? "rgba(185,28,28,0.85)"
+                            : riskAssessment.overallRisk === "caution" ? "rgba(180,120,0,0.8)"
+                            : "rgba(21,128,61,0.75)",
+                  borderRadius: 10, padding: "7px 12px",
+                  display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.75rem", color: "white",
+                }}>
+                  <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: 1 }}>
+                    {riskAssessment.overallRisk === "danger" ? "🚨" : riskAssessment.overallRisk === "caution" ? "⚠️" : "✅"}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, marginBottom: riskAssessment.reasons.length > 1 ? 2 : 0 }}>
+                      {riskAssessment.overallRisk === "danger"  ? "SICHERHEITSWARNUNG"
+                      : riskAssessment.overallRisk === "caution" ? "Vorsicht"
+                      : "Wasserqualität OK"}
+                    </div>
+                    <div style={{ opacity: 0.92, lineHeight: 1.45 }}>
+                      {riskAssessment.reasons[0]}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {staleWarn && (
                 <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.55)", marginTop: 5, fontStyle: "italic" }}>
                   ⏱ Messung vor {daysSinceLast} Tagen – Werte möglicherweise veraltet
@@ -238,6 +273,40 @@ export default function App() {
             </div>
           )}
         </div>
+
+        {/* ── Nicht-wegklickbarer Gefahren-Banner ────────────────── */}
+        {riskAssessment?.overallRisk === "danger" && (
+          <div style={{ background: "#7f1d1d", color: "white", padding: "14px 20px" }}>
+            <div style={{ fontWeight: 800, fontSize: "0.92rem", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              <span>🚨</span>
+              <span>SICHERHEITSWARNUNG — Spa nicht benutzen</span>
+            </div>
+            {riskAssessment.reasons.map((r, i) => (
+              <div key={i} style={{
+                fontSize: "0.79rem", lineHeight: 1.55, marginBottom: 4,
+                paddingLeft: r.startsWith("🦠") || r.startsWith("🚨") || r.startsWith("⚠️") ? 0 : 12,
+              }}>
+                {r}
+              </div>
+            ))}
+            {riskAssessment.urgentActions.length > 0 && (
+              <div style={{
+                marginTop: 10, background: "rgba(255,255,255,0.12)",
+                borderRadius: 8, padding: "8px 12px",
+              }}>
+                <div style={{ fontWeight: 700, fontSize: "0.72rem", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  Sofortmaßnahmen
+                </div>
+                {riskAssessment.urgentActions.map((a, i) => (
+                  <div key={i} style={{ fontSize: "0.8rem", marginBottom: 3 }}>→ {a}</div>
+                ))}
+              </div>
+            )}
+            <div style={{ marginTop: 8, fontSize: "0.68rem", opacity: 0.7, fontStyle: "italic" }}>
+              Diese Warnung verschwindet automatisch sobald du neue, sichere Messwerte einträgst.
+            </div>
+          </div>
+        )}
 
         {/* Alert-Zone: kombiniert wenn beide aktiv */}
         {(staleWarn || waterChangeDue) && (
@@ -363,8 +432,30 @@ export default function App() {
               </button>
 
               {saved && (
-                <div style={{ marginTop: 12, background: "#d1fae5", borderRadius: 12, padding: "12px 16px", color: "#065f46", fontWeight: 700, textAlign: "center", fontSize: "0.9rem" }}>
-                  ✅ Messung gespeichert!
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ background: "#d1fae5", borderRadius: 12, padding: "12px 16px", color: "#065f46", fontWeight: 700, textAlign: "center", fontSize: "0.9rem", marginBottom: 8 }}>
+                    ✅ Messung gespeichert!
+                  </div>
+                  {riskAssessment && (
+                    <div style={{
+                      background: riskAssessment.overallRisk === "danger"  ? "#fee2e2"
+                                : riskAssessment.overallRisk === "caution" ? "#fef3c7"
+                                : "#f0fdf4",
+                      borderRadius: 12, padding: "10px 16px",
+                      color: riskAssessment.overallRisk === "danger"  ? "#991b1b"
+                           : riskAssessment.overallRisk === "caution" ? "#92400e"
+                           : "#065f46",
+                      fontSize: "0.82rem", textAlign: "center", lineHeight: 1.5,
+                    }}>
+                      ⏱ Nächste Messung empfohlen in:{" "}
+                      <b>{formatRetestIn(riskAssessment.retestIn)}</b>
+                      {riskAssessment.overallRisk !== "safe" && (
+                        <div style={{ marginTop: 4, fontSize: "0.72rem", opacity: 0.8 }}>
+                          (erhöhter Chlorabbau bei {last?.temp.toFixed(0)}°C)
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
