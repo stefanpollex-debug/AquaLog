@@ -27,15 +27,16 @@ import { WeatherWidget }     from "./components/WeatherWidget";
 import { TrendsView }        from "./components/TrendsView";
 import { ChemLogInput }      from "./components/ChemLogInput";
 import { WaterChangeCard }   from "./components/WaterChangeCard";
-import { ProblemDiagnose }   from "./components/ProblemDiagnose";
-import { FilterCareCard }    from "./components/FilterCareCard";
+import { ProblemDiagnose }      from "./components/ProblemDiagnose";
+import { FilterCareCard }       from "./components/FilterCareCard";
+import { WasseranalyseView }    from "./components/WasseranalyseView";
 import { type PoolEntry, type ChemicalAddition } from "./hooks/usePoolEntries";
 import { useWaterChange }    from "./hooks/useWaterChange";
 import { useFilterLog }      from "./hooks/useFilterLog";
 import { daysSinceLastAddition, getWaterStatus } from "./utils/waterChange";
 import { daysSinceEntry }    from "./utils/filterLog";
 
-type Tab = "eingabe" | "verlauf" | "trends" | "hinweise";
+type Tab = "eingabe" | "verlauf" | "trends" | "hinweise" | "quellen";
 
 const DEFAULT_VALUES = { cl: 1.0, ph: 7.4, temp: 24, kh: 100, gh: 150 };
 const FIELD_LABELS: Record<FieldKey, string> = {
@@ -265,12 +266,13 @@ export default function App() {
 
         {/* ── Tabs ────────────────────────────────────────────────── */}
         <div style={{ display: "flex", background: "white", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 10 }}>
-          {(["eingabe", "verlauf", "trends", "hinweise"] as Tab[]).map((t) => {
+          {(["eingabe", "verlauf", "trends", "hinweise", "quellen"] as Tab[]).map((t) => {
             const labels: Record<Tab, string> = {
               eingabe: "Eingabe",
               verlauf: "Verlauf",
               trends:  "Trends",
               hinweise:"Tipps",
+              quellen: "Quellen",
             };
             return (
               <button key={t} onClick={() => setTab(t)} style={{
@@ -481,6 +483,19 @@ export default function App() {
                 📊 Trendanalyse
               </div>
               <TrendsView entries={entries} />
+            </div>
+          )}
+
+          {/* ── Tab: Wasserquellen ───────────────────────────────── */}
+          {tab === "quellen" && (
+            <div>
+              <div style={{ fontWeight: 700, color: "#0369a1", fontSize: "0.95rem", marginBottom: 14 }}>
+                🔬 Wasserquellen-Analyse
+              </div>
+              <WasseranalyseView
+                spaEntries={entries}
+                lastRainMm={weather?.forecast[0]?.precipSum ?? weather?.currentPrecipitation ?? 0}
+              />
             </div>
           )}
 
