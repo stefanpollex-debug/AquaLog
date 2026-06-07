@@ -9,6 +9,7 @@ import { usePoolProfile }    from "./hooks/usePoolProfile";
 import { useWeather }        from "./hooks/useWeather";
 import { usePinLock }        from "./hooks/usePinLock";
 import { useSwUpdate }       from "./hooks/useSwUpdate";
+import { useOnboarding }     from "./hooks/useOnboarding";
 import { LIMITS, STALE_DAYS, type FieldKey } from "./utils/constants";
 import { getStatus, daysSince }              from "./utils/status";
 import { getTipWithDose }                    from "./utils/dosage";
@@ -16,6 +17,7 @@ import { getWeatherPoolHints, getWmoIcon }   from "./utils/weather";
 import { assessRisk, formatRetestIn }        from "./utils/contextualRisk";
 
 import { PinScreen }         from "./components/PinScreen";
+import { OnboardingFlow }    from "./components/OnboardingFlow";
 import { PhotoScanner }      from "./components/PhotoScanner";
 import { ValueSlider }       from "./components/ValueSlider";
 import { StatCard }          from "./components/StatCard";
@@ -50,6 +52,7 @@ const FIELD_LABELS: Record<FieldKey, string> = {
 export default function App() {
   const { hasPin, unlocked, loading: pinLoading, attempts, lockedUntil, setPin, verifyPin, checkPin, clearPin } = usePinLock();
   const { updateReady, applyUpdate } = useSwUpdate();
+  const { onboardingDone, completeOnboarding } = useOnboarding();
   const { entries, loaded, addEntry, deleteEntry, bulkImport: bulkImportEntries } = usePoolEntries();
   const { profile, saveProfile }                   = usePoolProfile();
   const waterChange = useWaterChange();
@@ -182,7 +185,24 @@ export default function App() {
     );
   }
 
-  // 3. Data still loading
+  // 3. Onboarding state still loading from IndexedDB
+  if (onboardingDone === null) return (
+    <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ color: "#0369a1", fontWeight: 600 }}>Lade…</div>
+    </div>
+  );
+
+  // 4. First launch — show onboarding
+  if (!onboardingDone) {
+    return (
+      <OnboardingFlow
+        onComplete={completeOnboarding}
+        onSetPin={setPin}
+      />
+    );
+  }
+
+  // 5. Data still loading
   if (!loaded) return (
     <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ color: "#0369a1", fontWeight: 600 }}>Lade Daten…</div>
