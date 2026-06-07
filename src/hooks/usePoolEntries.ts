@@ -32,12 +32,44 @@ const LEGACY_KEY     = "pool_entries";
 const DB_VERSION_KEY = "db_version";
 const TARGET_VERSION = 1;
 
-/** ⚠️  Einmalige Migration: pool_entries → entries_spa.
- *  Läuft nur beim ersten Start nach dem Update.
- *  Sicherungskopie wird unter pool_entries_backup gespeichert. */
+/** Gibt true zurück wenn entries_spa leer ist oder nur den Demo-Eintrag enthält */
+async function isSpaEmpty(): Promise<boolean> {
+  const spa = await get<PoolEntry[]>("entries_spa");
+  return !spa?.length || (spa.length === 1 && spa[0].id === FIRST_ENTRY.id);
+}
+
+/** ⚠️  Migration + Recovery: pool_entries → entries_spa.
+ *
+ *  Läuft bei jedem Start — falls entries_spa nur den Demo-Eintrag enthält,
+ *  wird automatisch aus pool_entries_backup oder pool_entries wiederhergestellt.
+ *  So gehen keine Daten verloren, auch wenn die erste Migration fehlschlug. */
 async function runMigrationIfNeeded(): Promise<void> {
   const version = await get<number>(DB_VERSION_KEY);
-  if ((version ?? 0) >= TARGET_VERSION) return; // bereits migriert
+
+  // Migration bereits gelaufen — aber Recovery prüfen falls entries_spa leer ist
+  if ((version ?? 0) >= TARGET_VERSION) {
+    if (!(await isSpaEmpty())) return; // Daten vorhanden → nichts zu tun
+
+    // entries_spa ist leer/demo — Backup suchen
+    const backup = await get<PoolEntry[]>("pool_entries_backup");
+    if (backup?.length) {
+      await set("entries_spa", backup);
+      console.log(`[AquaLog] ✓ Recovery: ${backup.length} Einträge aus pool_entries_backup wiederhergestellt`);
+      return;
+    }
+
+    // Backup nicht gefunden — alten Key prüfen (Falls Löschen fehlschlug)
+    const legacy = await get<PoolEntry[]>(LEGACY_KEY);
+    if (legacy?.length) {
+      await set("pool_entries_backup", legacy); // erst sichern
+      await set("entries_spa", legacy);
+      await del(LEGACY_KEY);
+      console.log(`[AquaLog] ✓ Recovery: ${legacy.length} Einträge aus pool_entries wiederhergestellt`);
+    }
+    return;
+  }
+
+  // ── Erste Migration ───────────────────────────────────────────────────────
 
   const legacy = await get<PoolEntry[]>(LEGACY_KEY);
 
@@ -47,7 +79,7 @@ async function runMigrationIfNeeded(): Promise<void> {
     return;
   }
 
-  // Schritt 1: Sicherungskopie in IndexedDB (nie verloren, kein Popup)
+  // Schritt 1: Sicherungskopie in IndexedDB
   await set("pool_entries_backup", legacy);
   console.log(`[AquaLog] Backup: ${legacy.length} Einträge → pool_entries_backup`);
 
