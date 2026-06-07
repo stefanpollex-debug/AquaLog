@@ -320,23 +320,10 @@ const SEVERITY_ORDER: Record<TrendSeverity, number> = {
 };
 
 export function analyzeTrends(entries: PoolEntry[]): TrendResult[] {
-  if (entries.length < MIN_ENTRIES) return [];
-
   const results: TrendResult[] = [];
 
-  // 1. Wert-Trends
-  for (const field of ["cl", "ph", "temp"] as FieldKey[]) {
-    const r = analyzeValueTrend(entries, field);
-    if (r) results.push(r);
-  }
-
-  // 2. Prognosen (nur Cl & pH, nicht Temperatur)
-  for (const field of ["cl", "ph"] as FieldKey[]) {
-    const r = analyzeForecast(entries, field);
-    if (r) results.push(r);
-  }
-
-  // 3. Kontextuelle Temperatur-Chlor-Bewertung (überschreibt isolierte Ampel)
+  // ── Kontextuelle Checks laufen IMMER (auch mit < 5 Einträgen) ────────────
+  // Sicherheitswarnungen dürfen nicht hinter dem Datenmenge-Gate verschwinden.
   const latestEntry = entries[0];
   if (latestEntry) {
     const temp   = latestEntry.temp;
@@ -376,17 +363,32 @@ export function analyzeTrends(entries: PoolEntry[]): TrendResult[] {
     }
   }
 
-  // 4. Regen-Korrelation
-  const rain = analyzeRainCorrelation(entries);
-  if (rain) results.push(rain);
+  // ── Pattern-Checks erst ab MIN_ENTRIES ───────────────────────────────────
+  if (entries.length >= MIN_ENTRIES) {
+    // 1. Wert-Trends
+    for (const field of ["cl", "ph", "temp"] as FieldKey[]) {
+      const r = analyzeValueTrend(entries, field);
+      if (r) results.push(r);
+    }
 
-  // 5. Benutzungs-Korrelation
-  const usage = analyzeUsageCorrelation(entries);
-  if (usage) results.push(usage);
+    // 2. Prognosen (nur Cl & pH, nicht Temperatur)
+    for (const field of ["cl", "ph"] as FieldKey[]) {
+      const r = analyzeForecast(entries, field);
+      if (r) results.push(r);
+    }
 
-  // 6. Wochenmuster
-  const weekly = analyzeWeeklyPattern(entries);
-  if (weekly) results.push(weekly);
+    // 3. Regen-Korrelation
+    const rain = analyzeRainCorrelation(entries);
+    if (rain) results.push(rain);
+
+    // 4. Benutzungs-Korrelation
+    const usage = analyzeUsageCorrelation(entries);
+    if (usage) results.push(usage);
+
+    // 5. Wochenmuster
+    const weekly = analyzeWeeklyPattern(entries);
+    if (weekly) results.push(weekly);
+  }
 
   // Sortieren: danger → warning → info → good
   return results.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);

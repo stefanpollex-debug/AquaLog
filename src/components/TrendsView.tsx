@@ -21,17 +21,27 @@ export function TrendsView({ entries }: Props) {
   const results  = useMemo(() => analyzeTrends(entries), [entries]);
   const missing  = MIN_ENTRIES - entries.length;
 
-  // ── Zu wenig Daten ─────────────────────────────────────────────
+  // Kontextuelle Karten (Sicherheitswarnungen) — immer anzeigen
+  const contextualIds = new Set(["legionella_risk", "temp_cl_low", "temp_retest"]);
+  const contextualResults = results.filter(r => contextualIds.has(r.id));
+  const patternResults    = results.filter(r => !contextualIds.has(r.id));
+
+  // ── Zu wenig Daten für Pattern-Analyse ────────────────────────
   if (entries.length < MIN_ENTRIES) {
     return (
       <div style={{ padding: "24px 0" }}>
+        {/* Sicherheitswarnungen über dem Progress-Block */}
+        {contextualResults.map(r => (
+          <TrendCard key={r.id} result={r} />
+        ))}
+
         <div style={{
           background: "white", borderRadius: 18, padding: "28px 20px",
           textAlign: "center", boxShadow: "0 2px 12px #0369a110",
         }}>
           <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🔍</div>
           <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 8 }}>
-            Noch {missing} Messung{missing === 1 ? "" : "en"} bis zur ersten Analyse
+            Noch {missing} Messung{missing === 1 ? "" : "en"} bis zur Musteranalyse
           </div>
           <div style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5 }}>
             Mit mindestens {MIN_ENTRIES} Einträgen erkennt die App Muster in deinen Pool-Daten —
@@ -55,10 +65,11 @@ export function TrendsView({ entries }: Props) {
     );
   }
 
-  // ── Keine Auffälligkeiten ──────────────────────────────────────
-  if (results.length === 0) {
+  // ── Keine Pattern-Auffälligkeiten ────────────────────────────
+  if (patternResults.length === 0) {
     return (
       <div>
+        {contextualResults.map(r => <TrendCard key={r.id} result={r} />)}
         <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginBottom: 12 }}>
           {entryDateRange(entries)}
         </div>
@@ -68,10 +79,10 @@ export function TrendsView({ entries }: Props) {
         }}>
           <div style={{ fontSize: "2rem", marginBottom: 8 }}>🌊</div>
           <div style={{ fontWeight: 700, color: "#15803d", fontSize: "0.95rem" }}>
-            Alles im grünen Bereich
+            Keine Muster-Auffälligkeiten
           </div>
           <div style={{ fontSize: "0.8rem", color: "#166534", marginTop: 6, lineHeight: 1.5 }}>
-            Keine auffälligen Muster erkannt — dein Pool läuft optimal.
+            Keine auffälligen Trends erkannt — dein Pool läuft stabil.
           </div>
         </div>
       </div>
