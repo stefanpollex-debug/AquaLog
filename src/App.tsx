@@ -8,6 +8,7 @@ import { usePoolEntries }    from "./hooks/usePoolEntries";
 import { usePoolProfile }    from "./hooks/usePoolProfile";
 import { useWeather }        from "./hooks/useWeather";
 import { usePinLock }        from "./hooks/usePinLock";
+import { useSwUpdate }       from "./hooks/useSwUpdate";
 import { LIMITS, STALE_DAYS, type FieldKey } from "./utils/constants";
 import { getStatus, daysSince }              from "./utils/status";
 import { getTipWithDose }                    from "./utils/dosage";
@@ -48,6 +49,7 @@ const FIELD_LABELS: Record<FieldKey, string> = {
 
 export default function App() {
   const { hasPin, unlocked, loading: pinLoading, attempts, lockedUntil, setPin, verifyPin, checkPin, clearPin } = usePinLock();
+  const { updateReady, applyUpdate } = useSwUpdate();
   const { entries, loaded, addEntry, deleteEntry, bulkImport: bulkImportEntries } = usePoolEntries();
   const { profile, saveProfile }                   = usePoolProfile();
   const waterChange = useWaterChange();
@@ -776,6 +778,34 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* ── SW-Update-Banner ──────────────────────────────────── */}
+      {updateReady && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0,
+          maxWidth: 480, margin: "0 auto",
+          background: "#0369a1", color: "white",
+          padding: "11px 16px",
+          display: "flex", alignItems: "center", gap: 10,
+          zIndex: 200, boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
+        }}>
+          <span style={{ fontSize: "1rem", flexShrink: 0 }}>🔄</span>
+          <span style={{ flex: 1, fontSize: "0.82rem", fontWeight: 500, lineHeight: 1.35 }}>
+            Update verfügbar — neue Version bereit
+          </span>
+          <button
+            onClick={applyUpdate}
+            style={{
+              background: "white", color: "#0369a1",
+              border: "none", borderRadius: 8,
+              padding: "6px 12px", fontSize: "0.78rem",
+              fontWeight: 700, cursor: "pointer", flexShrink: 0,
+            }}
+          >
+            Jetzt neu laden
+          </button>
+        </div>
+      )}
 
       {/* Delete confirm */}
       {deleteTarget && (
