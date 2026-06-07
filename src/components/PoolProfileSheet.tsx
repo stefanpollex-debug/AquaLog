@@ -4,6 +4,7 @@ import { type PoolEntry }         from "../hooks/usePoolEntries";
 import { type FilterEntry }       from "../utils/filterLog";
 import { type WaterChangeRecord } from "../utils/waterChange";
 import { BackupPanel }            from "./BackupPanel";
+import { PinSettings }            from "./PinSettings";
 
 interface Props {
   profile:  PoolProfile;
@@ -17,6 +18,11 @@ interface Props {
   onImportFilterLog:   (log: FilterEntry[])     => void;
   onImportWaterChange: (r: WaterChangeRecord)   => void;
   onImportProfile:     (p: PoolProfile)         => void;
+  // PIN
+  hasPin:     boolean;
+  onSetPin:   (pin: string) => Promise<void>;
+  onCheckPin: (pin: string) => Promise<boolean>;
+  onClearPin: () => Promise<void>;
 }
 
 const POOL_TYPES   = ["Frame Pool", "Stahlwandpool", "Einbaupool", "Whirlpool / Spa", "Aufstellpool"];
@@ -29,6 +35,7 @@ export function PoolProfileSheet({
   profile, onSave, onClose,
   entries, filterLog, waterChange,
   onImportEntries, onImportFilterLog, onImportWaterChange, onImportProfile,
+  hasPin, onSetPin, onCheckPin, onClearPin,
 }: Props) {
   const [form, setForm] = useState<PoolProfile>(profile);
 
@@ -131,6 +138,16 @@ export function PoolProfileSheet({
             onImportFilterLog={onImportFilterLog}
             onImportWaterChange={onImportWaterChange}
             onImportProfile={(p) => { onImportProfile(p); setForm(p); }}
+          />
+        </div>
+
+        {/* ── PIN-Schutz ────────────────────────────────────── */}
+        <div style={{ marginTop: 24, borderTop: "1px solid #e2e8f0", paddingTop: 20 }}>
+          <PinSettings
+            hasPin={hasPin}
+            onSetPin={onSetPin}
+            onCheckPin={onCheckPin}
+            onClearPin={onClearPin}
           />
         </div>
       </div>
