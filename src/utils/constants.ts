@@ -1,12 +1,32 @@
 export const LIMITS = {
   cl:   { min: 0.5, max: 1.5, step: 0.1,  sliderMin: 0,   sliderMax: 5,   unit: "mg/l", label: "Chlor (Cl)",       color: "#0ea5e9" },
   ph:   { min: 7.2, max: 7.6, step: 0.05, sliderMin: 6.5, sliderMax: 8.5, unit: "",     label: "pH-Wert",          color: "#8b5cf6" },
-  temp: { min: 20,  max: 28,  step: 0.5,  sliderMin: 10,  sliderMax: 35,  unit: "°C",   label: "Temperatur",       color: "#f97316" },
+  temp: { min: 20,  max: 28,  step: 0.5,  sliderMin: 10,  sliderMax: 45,  unit: "°C",   label: "Temperatur",       color: "#f97316" },
   kh:   { min: 80,  max: 120, step: 5,    sliderMin: 20,  sliderMax: 250, unit: "mg/l", label: "Alkalinität (KH)", color: "#10b981" },
   gh:   { min: 100, max: 200, step: 10,   sliderMin: 50,  sliderMax: 500, unit: "mg/l", label: "Gesamthärte (GH)", color: "#f472b6" },
 } as const;
 
 export type FieldKey = keyof typeof LIMITS;
+
+/** Pool-typ-spezifische Grenzwerte — überschreibt nur min/max, Slider-Ranges bleiben gleich */
+export function getLimitsForPoolType(poolType: string) {
+  if (poolType === "Whirlpool / Spa") {
+    return {
+      ...LIMITS,
+      cl:   { ...LIMITS.cl,   min: 1.0, max: 5.0 },
+      ph:   { ...LIMITS.ph,   min: 7.2, max: 7.8 },
+      temp: { ...LIMITS.temp, min: 34,  max: 40  },
+    };
+  }
+  return {
+    ...LIMITS,
+    cl:   { ...LIMITS.cl,   min: 0.5, max: 3.0 },
+    ph:   { ...LIMITS.ph,   min: 7.2, max: 7.6 },
+    temp: { ...LIMITS.temp, min: 20,  max: 28  },
+  };
+}
+
+export type ActiveLimits = ReturnType<typeof getLimitsForPoolType>;
 
 export const POOL = {
   name: "Home Deluxe Spa DROP",

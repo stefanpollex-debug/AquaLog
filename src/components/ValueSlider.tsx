@@ -1,4 +1,4 @@
-import { LIMITS, type FieldKey } from "../utils/constants";
+import { LIMITS, type FieldKey, type ActiveLimits } from "../utils/constants";
 import { getStatus } from "../utils/status";
 import { StatusBadge } from "./StatusBadge";
 
@@ -7,21 +7,23 @@ interface Props {
   value: number;
   touched: boolean;
   onChange: (v: number) => void;
+  limits?: ActiveLimits;
 }
 
-export function ValueSlider({ field, value, touched, onChange }: Props) {
-  const l = LIMITS[field];
-  const pct = ((value - l.sliderMin) / (l.sliderMax - l.sliderMin)) * 100;
-  const okL = ((l.min  - l.sliderMin) / (l.sliderMax - l.sliderMin)) * 100;
-  const okR = ((l.max  - l.sliderMin) / (l.sliderMax - l.sliderMin)) * 100;
-  const st  = getStatus(field, value);
+export function ValueSlider({ field, value, touched, onChange, limits }: Props) {
+  const base = LIMITS[field];           // step, sliderMin, sliderMax, unit, label, color
+  const l    = (limits ?? LIMITS)[field]; // min, max (pool-type-aware)
+  const pct = ((value - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100;
+  const okL = ((l.min  - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100;
+  const okR = ((l.max  - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100;
+  const st  = getStatus(field, value, limits);
   const thumb = st === "ok" ? "#22c55e" : st === "low" ? "#f59e0b" : "#ef4444";
 
   return (
     <div style={{ marginTop: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <span style={{ fontWeight: 700, fontSize: "1.15rem", color: touched ? "#1e293b" : "#94a3b8" }}>
-          {touched ? `${value.toFixed(1)}${l.unit}` : "— nicht gesetzt"}
+          {touched ? `${value.toFixed(1)}${base.unit}` : "— nicht gesetzt"}
         </span>
         {touched
           ? <StatusBadge status={st} />
@@ -41,7 +43,7 @@ export function ValueSlider({ field, value, touched, onChange }: Props) {
           }} />
         )}
         <input
-          type="range" min={l.sliderMin} max={l.sliderMax} step={l.step} value={value}
+          type="range" min={base.sliderMin} max={base.sliderMax} step={base.step} value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           style={{ position: "absolute", left: 0, right: 0, width: "100%", opacity: 0, height: 28, cursor: "pointer", zIndex: 2 }}
         />
@@ -56,9 +58,9 @@ export function ValueSlider({ field, value, touched, onChange }: Props) {
         }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "#94a3b8", marginTop: 2 }}>
-        <span>{l.sliderMin}{l.unit}</span>
+        <span>{base.sliderMin}{base.unit}</span>
         <span style={{ color: "#22c55e", fontWeight: 600 }}>OK: {l.min}–{l.max}</span>
-        <span>{l.sliderMax}{l.unit}</span>
+        <span>{base.sliderMax}{base.unit}</span>
       </div>
     </div>
   );

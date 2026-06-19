@@ -1,9 +1,9 @@
-import { LIMITS, type FieldKey } from "./constants";
+import { LIMITS, type FieldKey, type ActiveLimits } from "./constants";
 
 export type Status = "ok" | "low" | "high";
 
-export function getStatus(key: FieldKey, value: number): Status {
-  const l = LIMITS[key];
+export function getStatus(key: FieldKey, value: number, limits?: ActiveLimits): Status {
+  const l = (limits ?? LIMITS)[key];
   if (value < l.min) return "low";
   if (value > l.max) return "high";
   return "ok";
