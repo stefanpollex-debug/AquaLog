@@ -1,4 +1,5 @@
 import type { PoolEntry } from "../hooks/usePoolEntries";
+import { LIMITS } from "./constants";
 
 // ── Öffentliche Typen ─────────────────────────────────────────────────────────
 
@@ -113,6 +114,24 @@ export function assessRisk(
     }
   }
 
+  // Chlor zu hoch — obere Grenze aus LIMITS, damit Dot und Banner konsistent sind
+  if (cl > LIMITS.cl.max) {
+    if (cl > LIMITS.cl.max * 3) { // > 4.5 mg/l
+      promote("danger");
+      reasons.push(
+        `🚨 Chlor zu hoch (${cl.toFixed(2)} mg/l) — nicht sicher zum Baden. ` +
+        `Maximum: ${LIMITS.cl.max} mg/l`
+      );
+      urgentActions.push("Wasser verdünnen oder Teilwasserwechsel vornehmen");
+    } else {
+      promote("caution");
+      reasons.push(
+        `⚠️ Chlor erhöht (${cl.toFixed(2)} mg/l) — Idealbereich: ` +
+        `${LIMITS.cl.min}–${LIMITS.cl.max} mg/l`
+      );
+    }
+  }
+
   // ── 3. Fallender Cl-Trend bei hoher Temperatur ─────────────────────────
 
   if (temp > 30 && recentEntries.length >= 3) {
@@ -133,21 +152,28 @@ export function assessRisk(
     }
   }
 
-  // ── 4. pH-Kontext ─────────────────────────────────────────────────────
+  // ── 4. pH-Kontext — Schwellen aus LIMITS für Konsistenz mit Dot-Indikator ──
 
-  if (ph < 7.0) {
+  if (ph < LIMITS.ph.min) {
     promote("caution");
-    reasons.push(`⚠️ pH zu niedrig (${ph.toFixed(2)}) — Wasser zu sauer, Desinfektionswirkung reduziert`);
-  } else if (ph > 7.8) {
+    reasons.push(
+      `⚠️ pH zu niedrig (${ph.toFixed(2)}) — Wasser zu sauer, Hautreizungen möglich. ` +
+      `Idealbereich: ${LIMITS.ph.min}–${LIMITS.ph.max}`
+    );
+    urgentActions.push("pH mit pH-Plus auf 7,2–7,6 anheben");
+  } else if (ph > LIMITS.ph.max) {
     promote("caution");
-    reasons.push(`⚠️ pH zu hoch (${ph.toFixed(2)}) — Chlor verliert bei hohem pH stark an Wirkung`);
+    reasons.push(
+      `⚠️ pH zu hoch (${ph.toFixed(2)}) — Chlor verliert an Wirkung. ` +
+      `Idealbereich: ${LIMITS.ph.min}–${LIMITS.ph.max}`
+    );
+    urgentActions.push("pH mit pH-Minus auf 7,2–7,6 absenken");
     if (ph > 8.0 && temp > 30) {
       promote("danger");
       reasons.push(
         `🚨 pH ${ph.toFixed(2)} + Temperatur ${temp.toFixed(0)}°C: ` +
         `Chlor wirkt kaum noch — sofort korrigieren`
       );
-      urgentActions.push("pH mit pH-Minus sofort auf 7,2–7,6 senken");
     }
   }
 
