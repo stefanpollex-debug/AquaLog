@@ -19,6 +19,7 @@ export interface PoolEntry {
   temp: number;
   kh?: number;                      // Alkalinität / Karbonathärte (mg/l) — optional
   gh?: number;                      // Gesamthärte / Calcium-Härte (mg/l) — optional
+  cya?: number;                     // Cyanuric Acid / Stabilisator (mg/l) — optional, nur Freibäder
   note: string;
   outTemp?:    number;              // Außentemperatur (°C)
   uvIndex?:    number;              // UV-Index
