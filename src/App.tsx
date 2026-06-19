@@ -10,11 +10,11 @@ import { useWeather }        from "./hooks/useWeather";
 import { usePinLock }        from "./hooks/usePinLock";
 import { useSwUpdate }       from "./hooks/useSwUpdate";
 import { useOnboarding }     from "./hooks/useOnboarding";
-import { LIMITS, STALE_DAYS, type FieldKey } from "./utils/constants";
-import { getStatus, daysSince }              from "./utils/status";
-import { getTipWithDose }                    from "./utils/dosage";
-import { getWeatherPoolHints, getWmoIcon }   from "./utils/weather";
-import { assessRisk, formatRetestIn }        from "./utils/contextualRisk";
+import { LIMITS, STALE_DAYS, getLimitsForPoolType, type FieldKey } from "./utils/constants";
+import { getStatus, daysSince }                                    from "./utils/status";
+import { getTipWithDose }                                          from "./utils/dosage";
+import { getWeatherPoolHints, getWmoIcon }                         from "./utils/weather";
+import { assessRisk, formatRetestIn, calculateLSI }                from "./utils/contextualRisk";
 
 import { PinScreen }         from "./components/PinScreen";
 import { OnboardingFlow }    from "./components/OnboardingFlow";
@@ -61,6 +61,8 @@ export default function App() {
 
   const [form, setForm]       = useState({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
   const [touched, setTouched] = useState<Record<FieldKey, boolean>>({ cl: false, ph: false, temp: false, kh: false, gh: false });
+  const [cyaValue, setCyaValue]   = useState(50);
+  const [cyaTouched, setCyaTouched] = useState(false);
   const [tab, setTab]         = useState<Tab>("eingabe");
   const [saved, setSaved]     = useState(false);
   const [chemicals, setChemicals]          = useState<ChemicalAddition[]>([]);
@@ -90,6 +92,7 @@ export default function App() {
       temp: +form.temp,
       ...(touched.kh ? { kh: +form.kh } : {}),
       ...(touched.gh ? { gh: +form.gh } : {}),
+      ...(!isSpa && cyaTouched ? { cya: cyaValue } : {}),
       note: form.note,
       // Wetter automatisch speichern (Temp + UV + heutiger Tages-Niederschlag)
       ...(weather ? {
@@ -102,13 +105,18 @@ export default function App() {
     });
     setForm({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
     setTouched({ cl: false, ph: false, temp: false, kh: false, gh: false });
+    setCyaValue(50);
+    setCyaTouched(false);
     setChemicals([]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   };
 
+  const activeLimits   = getLimitsForPoolType(profile.poolType);
+  const isSpa          = profile.poolType === "Whirlpool / Spa";
+
   const last          = entries[0];
-  const riskAssessment = last ? assessRisk(last, entries) : null;
+  const riskAssessment = last ? assessRisk(last, entries, activeLimits) : null;
   const chartData     = [...entries].reverse().slice(-20);
   const daysSinceLast = last ? daysSince(last.date) : null;
   const staleWarn     = daysSinceLast !== null && daysSinceLast >= STALE_DAYS;
@@ -154,7 +162,7 @@ export default function App() {
         .map((k) => {
           const val = last[k as keyof typeof last] as number | undefined;
           if (val == null) return null;
-          const st = getStatus(k, val);
+          const st = getStatus(k, val, activeLimits);
           return st !== "ok" ? getTipWithDose(k, st, val, volumeM3) : null;
         })
         .filter(Boolean)
@@ -257,11 +265,37 @@ export default function App() {
                       <span style={{ opacity: 0.8 }}>{LIMITS[k].label}: </span>
                       <b>{val.toFixed(k === "kh" || k === "gh" ? 0 : 1)}{LIMITS[k].unit}</b>
                       {isTempHigh && <span style={{ marginLeft: 3 }}>🔥</span>}
-                      <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, val)} /></span>
+                      <span style={{ marginLeft: 4 }}><TrafficLight status={getStatus(k, val, activeLimits)} /></span>
                     </div>
                   );
                 })}
               </div>
+
+              {/* LSI-Kachel — nur wenn gh + kh im letzten Eintrag vorhanden */}
+              {last.gh != null && last.kh != null && (() => {
+                const lsi = calculateLSI(last.ph, last.temp, last.gh, last.kh);
+                const pct = Math.max(0, Math.min(100, ((lsi + 1) / 2) * 100));
+                const lsiColor = lsi < -0.3 ? "#ef4444" : lsi > 0.3 ? "#f97316" : "#22c55e";
+                const lsiLabel = lsi < -0.5 ? "Stark korrosiv"
+                               : lsi < -0.3 ? "Leicht korrosiv"
+                               : lsi > 0.5  ? "Stark kalkbildend"
+                               : lsi > 0.3  ? "Leicht kalkbildend"
+                               : "Ausgewogen ✓";
+                return (
+                  <div style={{ marginTop: 8, background: "rgba(255,255,255,0.12)", borderRadius: 10, padding: "8px 12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: "0.7rem", opacity: 0.85, fontWeight: 600 }}>Langelier-Index (LSI)</span>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: lsiColor }}>{lsi.toFixed(2)} — {lsiLabel}</span>
+                    </div>
+                    <div style={{ position: "relative", height: 8, borderRadius: 4, background: "linear-gradient(to right,#ef4444 0%,#f59e0b 22%,#22c55e 40%,#22c55e 60%,#f59e0b 78%,#ef4444 100%)" }}>
+                      <div style={{ position: "absolute", top: -3, left: `calc(${pct}% - 7px)`, width: 14, height: 14, borderRadius: "50%", background: "white", border: `3px solid ${lsiColor}`, boxShadow: `0 0 6px ${lsiColor}88` }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.6rem", opacity: 0.55, marginTop: 4 }}>
+                      <span>−1.0 korrosiv</span><span>0 ideal</span><span>+1.0 kalkig</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Gesamtrisiko-Ampel */}
               {riskAssessment && (
@@ -429,11 +463,101 @@ export default function App() {
                       {FIELD_LABELS[k]}
                       {(k === "kh" || k === "gh") && <span style={{ fontWeight: 400, fontSize: "0.72rem", color: "#94a3b8", marginLeft: 6 }}>optional</span>}
                     </span>
-                    <TrafficLight status={touched[k] ? getStatus(k, form[k]) : "ok"} />
+                    <TrafficLight status={touched[k] ? getStatus(k, form[k], activeLimits) : "ok"} />
                   </div>
-                  <ValueSlider field={k} value={form[k]} touched={touched[k]} onChange={(v) => touch(k, v)} />
+                  <ValueSlider field={k} value={form[k]} touched={touched[k]} onChange={(v) => touch(k, v)} limits={activeLimits} />
                 </div>
               ))}
+
+              {/* CYA-Slider — nur für Freibäder, nicht für Spas */}
+              {!isSpa && (
+                <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>
+                      Stabilisator (CYA)
+                      <span style={{ fontWeight: 400, fontSize: "0.72rem", color: "#94a3b8", marginLeft: 6 }}>optional</span>
+                    </span>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 600, color:
+                      !cyaTouched ? "#94a3b8"
+                      : cyaValue > 100 ? "#ef4444"
+                      : cyaValue > 90  ? "#f59e0b"
+                      : cyaValue >= 30 && cyaValue <= 50 ? "#22c55e"
+                      : "#f59e0b"
+                    }}>
+                      {cyaTouched
+                        ? (cyaValue > 100 ? "zu hoch" : cyaValue > 90 ? "erhöht" : cyaValue >= 30 && cyaValue <= 50 ? "OK" : "akzeptabel")
+                        : "nicht gesetzt"}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, fontSize: "1.15rem", color: cyaTouched ? "#1e293b" : "#94a3b8" }}>
+                        {cyaTouched ? `${cyaValue} mg/l` : "— nicht gesetzt"}
+                      </span>
+                      {!cyaTouched && <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontStyle: "italic" }}>Slider bewegen zum Setzen</span>}
+                    </div>
+                    <div style={{ position: "relative", height: 28, display: "flex", alignItems: "center" }}>
+                      <div style={{
+                        position: "absolute", left: 0, right: 0, height: 8, borderRadius: 8, overflow: "hidden",
+                        background: "linear-gradient(to right,#fee2e2 0%,#fee2e2 20%,#d1fae5 20%,#d1fae5 33%,#fef3c7 33%,#fef3c7 67%,#fee2e2 67%,#fee2e2 100%)",
+                        opacity: cyaTouched ? 1 : 0.4,
+                      }} />
+                      {cyaTouched && (
+                        <div style={{
+                          position: "absolute", left: 0, width: `${(cyaValue / 150) * 100}%`, height: 8, borderRadius: 8,
+                          background: cyaValue > 100 ? "#ef4444" : cyaValue > 90 ? "#f59e0b" : "#22c55e",
+                          transition: "width 0.1s, background 0.2s", opacity: 0.75,
+                        }} />
+                      )}
+                      <input
+                        type="range" min={0} max={150} step={5} value={cyaValue}
+                        onChange={(e) => { setCyaValue(parseInt(e.target.value)); setCyaTouched(true); }}
+                        style={{ position: "absolute", left: 0, right: 0, width: "100%", opacity: 0, height: 28, cursor: "pointer", zIndex: 2 }}
+                      />
+                      <div style={{
+                        position: "absolute",
+                        left: cyaTouched ? `calc(${(cyaValue / 150) * 100}% - 11px)` : "calc(50% - 11px)",
+                        width: 22, height: 22, borderRadius: "50%",
+                        background: cyaTouched ? (cyaValue > 100 ? "#ef4444" : cyaValue > 90 ? "#f59e0b" : "#22c55e") : "#cbd5e1",
+                        border: "3px solid white",
+                        boxShadow: cyaTouched ? "0 2px 8px #0002" : "0 1px 4px #0001",
+                        transition: "left 0.1s, background 0.2s", pointerEvents: "none", zIndex: 1,
+                      }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "#94a3b8", marginTop: 2 }}>
+                      <span>0 mg/l</span>
+                      <span style={{ color: "#22c55e", fontWeight: 600 }}>Ideal: 30–50 mg/l</span>
+                      <span>150 mg/l</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* LSI Live-Vorschau im Eingabe-Tab — wenn kh + gh gesetzt */}
+              {touched.kh && touched.gh && (() => {
+                const lsi = calculateLSI(form.ph, form.temp, form.gh, form.kh);
+                const pct = Math.max(0, Math.min(100, ((lsi + 1) / 2) * 100));
+                const lsiColor = lsi < -0.3 ? "#ef4444" : lsi > 0.3 ? "#f97316" : "#22c55e";
+                const lsiLabel = lsi < -0.5 ? "Stark korrosiv"
+                               : lsi < -0.3 ? "Leicht korrosiv"
+                               : lsi > 0.5  ? "Stark kalkbildend"
+                               : lsi > 0.3  ? "Leicht kalkbildend"
+                               : "Ausgewogen ✓";
+                return (
+                  <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>Langelier-Index (LSI)</span>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: lsiColor }}>{lsi.toFixed(2)} — {lsiLabel}</span>
+                    </div>
+                    <div style={{ position: "relative", height: 10, borderRadius: 5, background: "linear-gradient(to right,#ef4444 0%,#f59e0b 22%,#22c55e 40%,#22c55e 60%,#f59e0b 78%,#ef4444 100%)" }}>
+                      <div style={{ position: "absolute", top: -4, left: `calc(${pct}% - 9px)`, width: 18, height: 18, borderRadius: "50%", background: "white", border: `3px solid ${lsiColor}`, boxShadow: `0 0 8px ${lsiColor}88` }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
+                      <span>−1.0 korrosiv</span><span style={{ color: "#22c55e", fontWeight: 600 }}>−0.3 bis +0.3 = ideal</span><span>+1.0 kalkig</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Notiz + Chemikalien – eine gemeinsame Karte */}
               <div style={{ background: "white", borderRadius: 18, padding: 14, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
@@ -587,7 +711,7 @@ export default function App() {
                                 return (
                                   <span key={k} style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 3 }}>
                                     <b style={{ color: "#1e293b" }}>{val.toFixed(k === "kh" || k === "gh" ? 0 : 1)}{LIMITS[k].unit}</b>
-                                    <StatusBadge status={getStatus(k, val)} />
+                                    <StatusBadge status={getStatus(k, val, activeLimits)} />
                                   </span>
                                 );
                               })}
