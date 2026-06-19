@@ -229,6 +229,9 @@ export default function App() {
               <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 2 }}>
                 {profile.name} · {profile.volumeLiters} L
               </div>
+              <div style={{ fontSize: "0.65rem", opacity: 0.55, marginTop: 1 }}>
+                {`v${__APP_VERSION__} · ${new Date(__BUILD_TIME__).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`}
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
               {daysSinceLast !== null && (
