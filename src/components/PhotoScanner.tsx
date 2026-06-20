@@ -43,6 +43,7 @@ export function PhotoScanner({ onResult }: Props) {
   const [chips, setChips]         = useState<Set<string>>(new Set());
   const [freeText, setFreeText]   = useState("");
   const inputRef                  = useRef<HTMLInputElement>(null);
+  const galleryInputRef           = useRef<HTMLInputElement>(null);
   const abortRef                  = useRef<AbortController | null>(null);
 
   const toggleChip = (id: string) =>
@@ -185,7 +186,8 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
     reader.readAsDataURL(file);
   };
 
-  const openCamera = () => inputRef.current?.click();
+  const openCamera  = () => inputRef.current?.click();
+  const openGallery = () => galleryInputRef.current?.click();
 
   const startAnalysis = () => {
     if (!pendingB64) return;
@@ -216,21 +218,34 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
 
       <input ref={inputRef} type="file" accept="image/*" capture="environment"
         style={{ display: "none" }} onChange={(e) => analyseFile(e.target.files?.[0])} />
+      <input ref={galleryInputRef} type="file" accept="image/*"
+        style={{ display: "none" }} onChange={(e) => analyseFile(e.target.files?.[0])} />
 
       {/* ── IDLE ── */}
       {state === "idle" && (
-        <div onClick={openCamera}
+        <div
           onDrop={(e) => { e.preventDefault(); analyseFile(e.dataTransfer.files[0]); }}
           onDragOver={(e) => e.preventDefault()}
           style={{ border: "2px dashed #bae6fd", borderRadius: 14, padding: "22px 16px",
-            textAlign: "center", cursor: "pointer", background: "#f0f9ff" }}>
-          <div style={{ fontSize: "2rem" }}>📷</div>
-          <div style={{ fontWeight: 600, color: "#0369a1", marginTop: 6, fontSize: "0.9rem" }}>
-            Teststreifen fotografieren
+            textAlign: "center", background: "#f0f9ff" }}>
+          <div onClick={openCamera} style={{ cursor: "pointer" }}>
+            <div style={{ fontSize: "2rem" }}>📷</div>
+            <div style={{ fontWeight: 600, color: "#0369a1", marginTop: 6, fontSize: "0.9rem" }}>
+              Teststreifen fotografieren
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 3 }}>
+              KI liest Cl, pH und Temperatur automatisch aus
+            </div>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 3 }}>
-            KI liest Cl, pH und Temperatur automatisch aus
-          </div>
+          <button onClick={openGallery} type="button"
+            style={{
+              marginTop: 14, padding: "8px 16px", background: "white",
+              border: "1.5px solid #bae6fd", borderRadius: 10, cursor: "pointer",
+              fontWeight: 600, color: "#0369a1", fontSize: "0.8rem",
+              display: "inline-flex", alignItems: "center", gap: 6,
+            }}>
+            🖼️ Vorhandenes Foto verwenden
+          </button>
         </div>
       )}
 
