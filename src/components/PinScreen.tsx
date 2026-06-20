@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { clear } from "idb-keyval";
+import { del } from "idb-keyval";
 
 interface Props {
   attempts:    number;
@@ -67,7 +67,7 @@ export function PinScreen({ attempts, lockedUntil, onVerify }: Props) {
 
   const handleDeleteAll = async () => {
     setDeleting(true);
-    await clear();
+    await del("pin_hash");
     window.location.reload();
   };
 
@@ -185,10 +185,10 @@ export function PinScreen({ attempts, lockedUntil, onVerify }: Props) {
           maxWidth: 290, textAlign: "center",
         }}>
           <div style={{ color: "white", fontWeight: 700, fontSize: "0.95rem", marginBottom: 10 }}>
-            ⚠️ Alle Daten löschen?
+            🔓 PIN zurücksetzen?
           </div>
           <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.78rem", lineHeight: 1.65, marginBottom: 18 }}>
-            Alle Pool-Messungen, Einstellungen und der PIN werden unwiderruflich gelöscht.
+            Der PIN wird entfernt, die App startet danach ohne Sperre. Deine Pool-Messungen und Einstellungen bleiben vollständig erhalten — du kannst in den Einstellungen jederzeit einen neuen PIN festlegen.
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setShowForgot(false)} style={{
@@ -206,7 +206,7 @@ export function PinScreen({ attempts, lockedUntil, onVerify }: Props) {
               borderRadius: 12, color: "white",
               fontWeight: 700, fontSize: "0.85rem", cursor: "pointer",
             }}>
-              Alles löschen
+              PIN entfernen
             </button>
           </div>
         </div>
