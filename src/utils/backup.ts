@@ -5,6 +5,7 @@ import { type FilterEntry, type FilterSettings } from "./filterLog";
 import { type WaterChangeRecord }  from "./waterChange";
 import { type PoolProfile }        from "../hooks/usePoolProfile";
 import { LIMITS, getLimitsForPoolType, type FieldKey, type ActiveLimits } from "./constants";
+import { calculateLSI } from "./contextualRisk";
 
 export interface AppSettings {
   profile:         PoolProfile;
@@ -41,7 +42,7 @@ export function exportJSON(backup: AquaLogBackup): void {
 
 // ── CSV Export ─────────────────────────────────────────────────────────────
 export function exportCSV(entries: PoolEntry[]): void {
-  const header = "Datum;Chlor (mg/l);pH;Temperatur (°C);Notiz;Außentemp (°C);UV-Index;Regen (mm)";
+  const header = "Datum;Chlor (mg/l);pH;Temperatur (°C);KH (mg/l);GH (mg/l);CYA (mg/l);LSI;Notiz;Außentemp (°C);UV-Index;Regen (mm)";
   const rows   = [...entries]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(e => [
@@ -49,6 +50,10 @@ export function exportCSV(entries: PoolEntry[]): void {
       e.cl.toFixed(2),
       e.ph.toFixed(2),
       e.temp.toFixed(1),
+      e.kh?.toFixed(0) ?? "",
+      e.gh?.toFixed(0) ?? "",
+      e.cya?.toFixed(0) ?? "",
+      e.gh != null && e.kh != null ? calculateLSI(e.ph, e.temp, e.gh, e.kh).toFixed(2) : "",
       `"${(e.note ?? "").replace(/"/g, '""')}"`,
       e.outTemp?.toFixed(1) ?? "",
       e.uvIndex?.toFixed(1) ?? "",
@@ -201,12 +206,14 @@ export function exportPDF(entries: PoolEntry[], profile: PoolProfile): void {
 
   autoTable(doc, {
     startY:  curY + 8,
-    head: [["Datum", "Cl mg/l", "pH", "Temp °C", "Außen °C", "UV", "Notiz"]],
+    head: [["Datum", "Cl mg/l", "pH", "Temp °C", "CYA", "LSI", "Außen °C", "UV", "Notiz"]],
     body: [...sorted].reverse().map(e => [
       new Date(e.date + "T12:00:00").toLocaleDateString("de-DE"),
       e.cl.toFixed(2),
       e.ph.toFixed(2),
       e.temp.toFixed(1),
+      e.cya != null ? String(e.cya) : "—",
+      e.gh != null && e.kh != null ? calculateLSI(e.ph, e.temp, e.gh, e.kh).toFixed(2) : "—",
       e.outTemp != null ? e.outTemp.toFixed(1) : "—",
       e.uvIndex != null ? e.uvIndex.toFixed(1) : "—",
       e.note ?? "",
@@ -215,13 +222,15 @@ export function exportPDF(entries: PoolEntry[], profile: PoolProfile): void {
     bodyStyles:          { fontSize: 7.5 },
     alternateRowStyles:  { fillColor: [248, 250, 252] },
     columnStyles: {
-      0: { cellWidth: 24 },
-      1: { cellWidth: 18, halign: "right" },
-      2: { cellWidth: 14, halign: "right" },
-      3: { cellWidth: 18, halign: "right" },
-      4: { cellWidth: 18, halign: "right" },
-      5: { cellWidth: 10, halign: "right" },
-      6: { cellWidth: "auto" },
+      0: { cellWidth: 22 },
+      1: { cellWidth: 16, halign: "right" },
+      2: { cellWidth: 12, halign: "right" },
+      3: { cellWidth: 16, halign: "right" },
+      4: { cellWidth: 12, halign: "right" },
+      5: { cellWidth: 12, halign: "right" },
+      6: { cellWidth: 16, halign: "right" },
+      7: { cellWidth: 10, halign: "right" },
+      8: { cellWidth: "auto" },
     },
   });
 

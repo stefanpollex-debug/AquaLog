@@ -24,7 +24,7 @@ export function TrendsView({ entries, limits }: Props) {
   const missing  = MIN_ENTRIES - entries.length;
 
   // Kontextuelle Karten (Sicherheitswarnungen) — immer anzeigen
-  const contextualIds = new Set(["legionella_risk", "temp_cl_low", "temp_retest"]);
+  const contextualIds = new Set(["legionella_risk", "temp_cl_low", "temp_retest", "cya_high", "lsi_offrange"]);
   const contextualResults = results.filter(r => contextualIds.has(r.id));
   const patternResults    = results.filter(r => !contextualIds.has(r.id));
 

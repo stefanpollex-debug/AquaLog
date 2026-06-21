@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { CHEM_PRODUCTS } from "./ChemLogInput";
-import { LIMITS, type FieldKey } from "../utils/constants";
+import { LIMITS, type FieldKey, type ActiveLimits } from "../utils/constants";
 import { getStatus } from "../utils/status";
+import { calculateLSI } from "../utils/contextualRisk";
 import {
   getMonthGrid, getAvailableMonths, getDayColor,
   formatDate, MONTH_NAMES, WEEKDAY_NAMES,
@@ -12,9 +13,10 @@ import { StatusBadge } from "./StatusBadge";
 interface Props {
   entries: PoolEntry[];
   onDelete: (entry: PoolEntry) => void;
+  limits?: ActiveLimits;
 }
 
-export function CalendarHeatmap({ entries, onDelete }: Props) {
+export function CalendarHeatmap({ entries, onDelete, limits }: Props) {
   const now = new Date();
   const [currentYear, setCurrentYear]   = useState(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
@@ -92,7 +94,7 @@ export function CalendarHeatmap({ entries, onDelete }: Props) {
 
           const dateStr   = formatDate(currentYear, currentMonth, day);
           const entry     = entryMap.get(dateStr);
-          const dotColor  = getDayColor(entry);
+          const dotColor  = getDayColor(entry, limits);
           const isSelected = selectedDate === dateStr;
           const isToday    = dateStr === todayStr;
 
@@ -165,10 +167,40 @@ export function CalendarHeatmap({ entries, onDelete }: Props) {
                       <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 4 }}>
                         {(selectedEntry[k] as number).toFixed(1)}{LIMITS[k].unit}
                       </div>
-                      <StatusBadge status={getStatus(k, selectedEntry[k] as number)} />
+                      <StatusBadge status={getStatus(k, selectedEntry[k] as number, limits)} />
                     </div>
                   ))}
                 </div>
+
+                {/* KH/GH/CYA/LSI — falls erfasst */}
+                {(selectedEntry.kh != null || selectedEntry.gh != null || selectedEntry.cya != null) && (
+                  <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {(["kh", "gh"] as FieldKey[]).map(k => {
+                      const val = selectedEntry[k as keyof typeof selectedEntry] as number | undefined;
+                      if (val == null) return null;
+                      return (
+                        <div key={k} style={{ fontSize: "0.72rem", color: "#475569", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", display: "flex", alignItems: "center", gap: 4 }}>
+                          {LIMITS[k].label}: <b>{val.toFixed(0)}{LIMITS[k].unit}</b>
+                          <StatusBadge status={getStatus(k, val, limits)} />
+                        </div>
+                      );
+                    })}
+                    {selectedEntry.cya != null && (
+                      <div style={{ fontSize: "0.72rem", color: "#475569", background: "#f8fafc", borderRadius: 6, padding: "3px 8px" }}>
+                        Stabilisator (CYA): <b>{selectedEntry.cya} mg/l</b>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {selectedEntry.gh != null && selectedEntry.kh != null && (() => {
+                  const lsi = calculateLSI(selectedEntry.ph, selectedEntry.temp, selectedEntry.gh, selectedEntry.kh);
+                  const lsiColor = lsi < -0.3 ? "#ef4444" : lsi > 0.3 ? "#f97316" : "#22c55e";
+                  return (
+                    <div style={{ marginTop: 6, fontSize: "0.72rem", color: "#475569", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", display: "inline-block" }}>
+                      LSI: <b style={{ color: lsiColor }}>{lsi.toFixed(2)}</b>
+                    </div>
+                  );
+                })()}
 
                 {/* Außenwetter zum Messzeitpunkt */}
                 {(selectedEntry.outTemp != null || selectedEntry.uvIndex != null || selectedEntry.rainMm != null) && (

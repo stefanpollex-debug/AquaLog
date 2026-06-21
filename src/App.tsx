@@ -636,14 +636,14 @@ export default function App() {
           {tab === "verlauf" && (
             <div>
               {/* Badebereit-Ampel */}
-              <SwimmingReadiness last={last} daysSinceLast={daysSinceLast} />
+              <SwimmingReadiness last={last} daysSinceLast={daysSinceLast} limits={activeLimits} />
 
               {/* Wetter-Widget */}
               <WeatherWidget weather={weather} loading={wxLoading} minutesAgo={minutesAgo} />
 
               <StatCard entries={entries} limits={activeLimits} />
 
-              <CalendarHeatmap entries={entries} onDelete={(e) => setDeleteTarget(e)} />
+              <CalendarHeatmap entries={entries} onDelete={(e) => setDeleteTarget(e)} limits={activeLimits} />
 
               {/* Charts */}
               {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => (
@@ -718,6 +718,20 @@ export default function App() {
                                   </span>
                                 );
                               })}
+                              {e.cya != null && (
+                                <span style={{ fontSize: "0.78rem", color: "#475569" }}>
+                                  CYA: <b style={{ color: "#1e293b" }}>{e.cya}mg/l</b>
+                                </span>
+                              )}
+                              {e.gh != null && e.kh != null && (() => {
+                                const lsi = calculateLSI(e.ph, e.temp, e.gh, e.kh);
+                                const lsiColor = lsi < -0.3 ? "#ef4444" : lsi > 0.3 ? "#f97316" : "#22c55e";
+                                return (
+                                  <span style={{ fontSize: "0.78rem", color: "#475569" }}>
+                                    LSI: <b style={{ color: lsiColor }}>{lsi.toFixed(2)}</b>
+                                  </span>
+                                );
+                              })()}
                               {e.chemicals?.map(c => (
                                 <span key={c.product} style={{ fontSize: "0.65rem", background: "#f0fdf4", color: "#15803d", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>
                                   🧪 {c.amount}{c.unit}

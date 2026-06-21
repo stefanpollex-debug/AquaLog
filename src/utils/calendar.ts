@@ -1,6 +1,6 @@
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { getStatus } from "./status";
-import { type FieldKey } from "./constants";
+import { type FieldKey, type ActiveLimits } from "./constants";
 
 export interface MonthRef { year: number; month: number; }
 
@@ -30,10 +30,10 @@ export function getAvailableMonths(entries: PoolEntry[]): MonthRef[] {
 }
 
 /** Farbe eines Tages basierend auf wie viele Werte außerhalb OK-Bereich. */
-export function getDayColor(entry: PoolEntry | undefined): string | null {
+export function getDayColor(entry: PoolEntry | undefined, limits?: ActiveLimits): string | null {
   if (!entry) return null;
   const bad = (["cl", "ph", "temp"] as FieldKey[])
-    .filter(k => getStatus(k, entry[k] as number) !== "ok").length;
+    .filter(k => getStatus(k, entry[k] as number, limits) !== "ok").length;
   if (bad === 0) return "#22c55e";
   if (bad === 1) return "#f59e0b";
   return "#ef4444";

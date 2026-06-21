@@ -1,19 +1,20 @@
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { getStatus } from "../utils/status";
-import { type FieldKey } from "../utils/constants";
+import { type FieldKey, type ActiveLimits } from "../utils/constants";
 
 interface Props {
   last: PoolEntry | undefined;
   daysSinceLast: number | null;
+  limits?: ActiveLimits;
 }
 
-export function SwimmingReadiness({ last, daysSinceLast }: Props) {
+export function SwimmingReadiness({ last, daysSinceLast, limits }: Props) {
   if (!last) return null;
 
   const badFields = (["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).filter((k) => {
     const val = last[k as keyof typeof last];
     if (val == null) return false;
-    return getStatus(k, val as number) !== "ok";
+    return getStatus(k, val as number, limits) !== "ok";
   });
   const isStale = daysSinceLast !== null && daysSinceLast >= 3;
 

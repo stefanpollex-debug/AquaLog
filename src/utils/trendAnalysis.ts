@@ -1,7 +1,7 @@
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { LIMITS, type FieldKey, type ActiveLimits } from "./constants";
 import { getStatus } from "./status";
-import { minChlorByTemp, retestIntervalByTemp, formatRetestIn } from "./contextualRisk";
+import { minChlorByTemp, retestIntervalByTemp, formatRetestIn, calculateLSI } from "./contextualRisk";
 
 // ── Öffentliche Typen ─────────────────────────────────────────────
 
@@ -363,6 +363,36 @@ export function analyzeTrends(entries: PoolEntry[], limits?: ActiveLimits): Tren
         title: `Nachmessintervall bei ${temp.toFixed(0)}°C`,
         message: `Bei dieser Temperatur baut sich Chlor schnell ab — nächste Messung in ${retest} empfohlen.`,
       });
+    }
+
+    // CYA / Stabilisator
+    if (latestEntry.cya != null && latestEntry.cya > 90) {
+      results.push({
+        id: "cya_high",
+        type: "value_trend",
+        severity: latestEntry.cya > 100 ? "danger" : "warning",
+        icon: "🧪",
+        title: "Stabilisator (CYA) erhöht",
+        message: `CYA bei ${latestEntry.cya} mg/l (Idealbereich: 30–50 mg/l) — Chlorwirkung reduziert.`,
+        action: latestEntry.cya > 100 ? "Teilwasserwechsel vornehmen" : "Bei Gelegenheit Teilwasserwechsel einplanen",
+      });
+    }
+
+    // LSI / Langelier-Index
+    if (latestEntry.gh != null && latestEntry.kh != null) {
+      const lsi = calculateLSI(latestEntry.ph, latestEntry.temp, latestEntry.gh, latestEntry.kh);
+      if (Math.abs(lsi) > 0.3) {
+        const corrosive = lsi < 0;
+        results.push({
+          id: "lsi_offrange",
+          type: "value_trend",
+          severity: Math.abs(lsi) > 0.5 ? "danger" : "warning",
+          icon: corrosive ? "🔧" : "🪨",
+          title: corrosive ? "Wasser korrosiv (LSI)" : "Wasser kalkbildend (LSI)",
+          message: `LSI ${lsi.toFixed(2)} — ${corrosive ? "greift Pumpe/Heizung an" : "Kalkablagerungen möglich"} (Ideal: −0,3 bis +0,3).`,
+          action: corrosive ? "KH oder GH erhöhen" : "pH absenken oder KH reduzieren",
+        });
+      }
     }
   }
 
