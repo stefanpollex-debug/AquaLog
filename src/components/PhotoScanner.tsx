@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { API_BASE } from "../utils/api";
 import { getStatus } from "../utils/status";
+import { type ActiveLimits } from "../utils/constants";
 import { StatusBadge } from "./StatusBadge";
 
 interface AiResult {
@@ -13,6 +14,7 @@ interface AiResult {
 
 interface Props {
   onResult: (vals: { cl: number; ph: number; temp: number | null }) => void;
+  limits?: ActiveLimits;
 }
 
 type State = "idle" | "context" | "loading" | "result" | "error";
@@ -34,7 +36,7 @@ const CHIPS: Chip[] = [
   { id: "chemikalie", emoji: "⚗️", label: "Chemikalie",     context: "Chemikalie wurde vor der Messung zugegeben" },
 ];
 
-export function PhotoScanner({ onResult }: Props) {
+export function PhotoScanner({ onResult, limits }: Props) {
   const [state, setState]         = useState<State>("idle");
   const [preview, setPreview]     = useState<string | null>(null);
   const [pendingB64, setPendingB64] = useState<{ b64: string; mt: string } | null>(null);
@@ -364,14 +366,14 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
               <div key={k} style={{ background: "white", borderRadius: 10, padding: "8px 12px", flex: 1 }}>
                 <div style={{ fontSize: "0.68rem", color: "#64748b" }}>{lbl}</div>
                 <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{aiResult[k] as number}{u}</div>
-                <StatusBadge status={getStatus(k as "cl" | "ph", aiResult[k] as number)} />
+                <StatusBadge status={getStatus(k as "cl" | "ph", aiResult[k] as number, limits)} />
               </div>
             ))}
             {aiResult.temp != null && (
               <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", flex: 1 }}>
                 <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Temperatur</div>
                 <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{aiResult.temp}°C</div>
-                <StatusBadge status={getStatus("temp", aiResult.temp)} />
+                <StatusBadge status={getStatus("temp", aiResult.temp, limits)} />
               </div>
             )}
           </div>

@@ -163,7 +163,7 @@ export default function App() {
           const val = last[k as keyof typeof last] as number | undefined;
           if (val == null) return null;
           const st = getStatus(k, val, activeLimits);
-          return st !== "ok" ? getTipWithDose(k, st, val, volumeM3) : null;
+          return st !== "ok" ? getTipWithDose(k, st, val, volumeM3, activeLimits) : null;
         })
         .filter(Boolean)
     : [];
@@ -455,7 +455,7 @@ export default function App() {
 
               {/* Photo scanner */}
               <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
-                <PhotoScanner onResult={handleAiResult} />
+                <PhotoScanner onResult={handleAiResult} limits={activeLimits} />
               </div>
 
               {/* Sliders */}
@@ -641,7 +641,7 @@ export default function App() {
               {/* Wetter-Widget */}
               <WeatherWidget weather={weather} loading={wxLoading} minutesAgo={minutesAgo} />
 
-              <StatCard entries={entries} />
+              <StatCard entries={entries} limits={activeLimits} />
 
               <CalendarHeatmap entries={entries} onDelete={(e) => setDeleteTarget(e)} />
 
@@ -655,8 +655,8 @@ export default function App() {
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(d: string) => d.slice(5)} />
                       <YAxis domain={[LIMITS[k].sliderMin, LIMITS[k].sliderMax]} tick={{ fontSize: 10 }} width={30} />
                       <Tooltip formatter={(v: number) => [`${v}${LIMITS[k].unit}`, LIMITS[k].label]} labelFormatter={(l: string) => `Datum: ${l}`} />
-                      <ReferenceLine y={LIMITS[k].min} stroke="#f59e0b" strokeDasharray="4 2" strokeWidth={1.5} />
-                      <ReferenceLine y={LIMITS[k].max} stroke="#f59e0b" strokeDasharray="4 2" strokeWidth={1.5} />
+                      <ReferenceLine y={activeLimits[k].min} stroke="#f59e0b" strokeDasharray="4 2" strokeWidth={1.5} />
+                      <ReferenceLine y={activeLimits[k].max} stroke="#f59e0b" strokeDasharray="4 2" strokeWidth={1.5} />
                       <Line type="monotone" dataKey={k} stroke={LIMITS[k].color} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -744,7 +744,7 @@ export default function App() {
               <div style={{ fontWeight: 700, color: "#0369a1", fontSize: "0.95rem", marginBottom: 14 }}>
                 📊 Trendanalyse
               </div>
-              <TrendsView entries={entries} />
+              <TrendsView entries={entries} limits={activeLimits} />
             </div>
           )}
 
@@ -871,7 +871,7 @@ export default function App() {
               />
 
               {/* KI-Wasseranalyse */}
-              <AiWaterReport last={last} profile={profile} daysSinceLast={daysSinceLast} />
+              <AiWaterReport last={last} profile={profile} daysSinceLast={daysSinceLast} limits={activeLimits} />
 
               {/* OK-Bereiche */}
               <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
@@ -880,7 +880,7 @@ export default function App() {
                   {(["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).map((k) => (
                     <div key={k} style={{ background: "#f8fafc", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
                       <div style={{ fontSize: "0.68rem", color: "#64748b", marginBottom: 4 }}>{LIMITS[k].label}</div>
-                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#22c55e" }}>{LIMITS[k].min}–{LIMITS[k].max}</div>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#22c55e" }}>{activeLimits[k].min}–{activeLimits[k].max}</div>
                       <div style={{ fontSize: "0.62rem", color: "#94a3b8" }}>{LIMITS[k].unit || "—"}</div>
                     </div>
                   ))}

@@ -85,7 +85,9 @@ export function assessRisk(
   const { temp, cl, ph, cya, gh, kh } = entry;
   const tempMinCl = minChlorByTemp(temp);
   const cyaMinCl  = cya && cya > 0 ? cya / 15 : 0;
-  const minCl     = Math.max(tempMinCl, cyaMinCl);
+  // Untergrenze ist immer das strengste der drei Kriterien — so können Dot
+  // (activeLimits) und Banner (diese Funktion) nie mehr auseinanderlaufen.
+  const minCl     = Math.max(tempMinCl, cyaMinCl, activeLimits.cl.min);
 
   // ── 1. Temperatur-Grenzwerte ────────────────────────────────────────────
 
@@ -116,6 +118,12 @@ export function assessRisk(
   } else if (temp > 32) {
     promote("caution");
     reasons.push(`⚠️ Spa-Temperatur zu hoch (${temp.toFixed(0)}°C) — Nutzung nicht empfohlen`);
+  } else if (temp < activeLimits.temp.min) {
+    promote("caution");
+    reasons.push(
+      `🌡️ Temperatur noch unter dem Zielbereich (${temp.toFixed(1)}°C, ` +
+      `Ziel: ${activeLimits.temp.min}–${activeLimits.temp.max}°C)`
+    );
   }
 
   // ── 2. Chlor mit Temperatur-Kontext ────────────────────────────────────
@@ -203,6 +211,23 @@ export function assessRisk(
         `Chlor wirkt kaum noch — sofort korrigieren`
       );
     }
+  }
+
+  // ── 4b. KH/GH außerhalb des Zielbereichs — Konsistenz mit Dot-Indikator ──
+
+  if (kh != null && (kh < activeLimits.kh.min || kh > activeLimits.kh.max)) {
+    promote("caution");
+    reasons.push(
+      `🧪 KH (Alkalinität) außerhalb des Zielbereichs (${kh} mg/l, ` +
+      `Ziel: ${activeLimits.kh.min}–${activeLimits.kh.max} mg/l)`
+    );
+  }
+  if (gh != null && (gh < activeLimits.gh.min || gh > activeLimits.gh.max)) {
+    promote("caution");
+    reasons.push(
+      `🧪 GH (Gesamthärte) außerhalb des Zielbereichs (${gh} mg/l, ` +
+      `Ziel: ${activeLimits.gh.min}–${activeLimits.gh.max} mg/l)`
+    );
   }
 
   // ── 5. CYA / Stabilisator ──────────────────────────────────────────────

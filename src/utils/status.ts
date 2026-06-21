@@ -18,9 +18,9 @@ export function avg(arr: Array<Record<string, number>>, key: string): number {
   return arr.reduce((s, e) => s + e[key], 0) / arr.length;
 }
 
-export function pctOutOfRange(arr: Array<Record<string, number>>, key: FieldKey): number {
+export function pctOutOfRange(arr: Array<Record<string, number>>, key: FieldKey, limits?: ActiveLimits): number {
   if (!arr.length) return 0;
   return Math.round(
-    (arr.filter((e) => getStatus(key, e[key]) !== "ok").length / arr.length) * 100
+    (arr.filter((e) => getStatus(key, e[key], limits) !== "ok").length / arr.length) * 100
   );
 }

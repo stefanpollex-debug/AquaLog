@@ -1,5 +1,5 @@
 import { type PoolEntry } from "../hooks/usePoolEntries";
-import { LIMITS, type FieldKey } from "./constants";
+import { LIMITS, type FieldKey, type ActiveLimits } from "./constants";
 import { getStatus } from "./status";
 import { minChlorByTemp, retestIntervalByTemp, formatRetestIn } from "./contextualRisk";
 
@@ -42,13 +42,13 @@ function mean(arr: number[]) {
 
 // ── 1. Trend pro Messwert ─────────────────────────────────────────
 
-function analyzeValueTrend(entries: PoolEntry[], field: FieldKey): TrendResult | null {
+function analyzeValueTrend(entries: PoolEntry[], field: FieldKey, limits?: ActiveLimits): TrendResult | null {
   const recent = entries.slice(0, 5);           // neuste 5
   if (recent.length < 3) return null;
 
   const asc  = [...recent].reverse();            // älteste → neuste
   const vals = asc.map(e => e[field] as number);
-  const limit = LIMITS[field];
+  const limit = (limits ?? LIMITS)[field];
 
   // Schwellenwert pro Feld (unter dem eine Änderung als Rauschen gilt)
   const noise = field === "temp" ? 1.0 : 0.1;
@@ -59,11 +59,11 @@ function analyzeValueTrend(entries: PoolEntry[], field: FieldKey): TrendResult |
   const total   = diffs.length;
 
   const currentVal    = vals[vals.length - 1];
-  const currentStatus = getStatus(field, currentVal);
+  const currentStatus = getStatus(field, currentVal, limits);
   const avgVal        = mean(vals).toFixed(1);
 
   // Alle Werte stabil im OK-Bereich?
-  const allOk  = asc.every(e => getStatus(field, e[field] as number) === "ok");
+  const allOk  = asc.every(e => getStatus(field, e[field] as number, limits) === "ok");
   const spread = Math.max(...vals) - Math.min(...vals);
   if (allOk && spread < noise * 3 && recent.length >= 4) {
     return {
@@ -118,7 +118,7 @@ function analyzeValueTrend(entries: PoolEntry[], field: FieldKey): TrendResult |
 
 // ── 2. Prognose ───────────────────────────────────────────────────
 
-function analyzeForecast(entries: PoolEntry[], field: FieldKey): TrendResult | null {
+function analyzeForecast(entries: PoolEntry[], field: FieldKey, limits?: ActiveLimits): TrendResult | null {
   const asc = entries.slice(0, 5).reverse();      // älteste → neuste
   if (asc.length < 3) return null;
 
@@ -133,9 +133,9 @@ function analyzeForecast(entries: PoolEntry[], field: FieldKey): TrendResult | n
 
   const dailyRate  = mean(dailyChanges);
   const currentVal = asc[asc.length - 1][field] as number;
-  const limit      = LIMITS[field];
+  const limit      = (limits ?? LIMITS)[field];
 
-  if (getStatus(field, currentVal) !== "ok") return null; // schon außerhalb → keine Prognose
+  if (getStatus(field, currentVal, limits) !== "ok") return null; // schon außerhalb → keine Prognose
 
   const formatDays = (d: number) => `${Math.round(d)} Tag${Math.round(d) === 1 ? "" : "en"}`;
 
@@ -319,8 +319,9 @@ const SEVERITY_ORDER: Record<TrendSeverity, number> = {
   danger: 0, warning: 1, info: 2, good: 3,
 };
 
-export function analyzeTrends(entries: PoolEntry[]): TrendResult[] {
+export function analyzeTrends(entries: PoolEntry[], limits?: ActiveLimits): TrendResult[] {
   const results: TrendResult[] = [];
+  const active = limits ?? LIMITS;
 
   // ── Kontextuelle Checks laufen IMMER (auch mit < 5 Einträgen) ────────────
   // Sicherheitswarnungen dürfen nicht hinter dem Datenmenge-Gate verschwinden.
@@ -328,7 +329,9 @@ export function analyzeTrends(entries: PoolEntry[]): TrendResult[] {
   if (latestEntry) {
     const temp   = latestEntry.temp;
     const cl     = latestEntry.cl;
-    const minCl  = minChlorByTemp(temp);
+    // Untergrenze richtet sich nach Temperatur UND Pool-Typ-Ziel — sonst
+    // widerspricht die Trend-Karte dem Dot-Indikator (gleiche Lücke wie in assessRisk).
+    const minCl  = Math.max(minChlorByTemp(temp), active.cl.min);
     const retest = formatRetestIn(retestIntervalByTemp(temp));
 
     if (temp >= 35 && cl < 1.5) {
@@ -367,13 +370,13 @@ export function analyzeTrends(entries: PoolEntry[]): TrendResult[] {
   if (entries.length >= MIN_ENTRIES) {
     // 1. Wert-Trends
     for (const field of ["cl", "ph", "temp"] as FieldKey[]) {
-      const r = analyzeValueTrend(entries, field);
+      const r = analyzeValueTrend(entries, field, limits);
       if (r) results.push(r);
     }
 
     // 2. Prognosen (nur Cl & pH, nicht Temperatur)
     for (const field of ["cl", "ph"] as FieldKey[]) {
-      const r = analyzeForecast(entries, field);
+      const r = analyzeForecast(entries, field, limits);
       if (r) results.push(r);
     }
 

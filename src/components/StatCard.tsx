@@ -1,9 +1,10 @@
 import { type PoolEntry } from "../hooks/usePoolEntries";
-import { LIMITS, type FieldKey } from "../utils/constants";
+import { LIMITS, type FieldKey, type ActiveLimits } from "../utils/constants";
 import { avg, pctOutOfRange } from "../utils/status";
 
 interface Props {
   entries: PoolEntry[];
+  limits?: ActiveLimits;
 }
 
 const FIELDS: [FieldKey, string, string][] = [
@@ -12,7 +13,7 @@ const FIELDS: [FieldKey, string, string][] = [
   ["temp", "🟠", "°C"],
 ];
 
-export function StatCard({ entries }: Props) {
+export function StatCard({ entries, limits }: Props) {
   if (entries.length < 2) return null;
   return (
     <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
@@ -24,7 +25,7 @@ export function StatCard({ entries }: Props) {
           const a   = avg(entries as unknown as Array<Record<string, number>>, k).toFixed(1);
           const mn  = Math.min(...entries.map((e) => e[k] as number)).toFixed(1);
           const mx  = Math.max(...entries.map((e) => e[k] as number)).toFixed(1);
-          const pct = pctOutOfRange(entries as unknown as Array<Record<string, number>>, k);
+          const pct = pctOutOfRange(entries as unknown as Array<Record<string, number>>, k, limits);
           return (
             <div key={k} style={{ background: "#f8fafc", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
               <div style={{ fontSize: "1.1rem" }}>{emoji}</div>

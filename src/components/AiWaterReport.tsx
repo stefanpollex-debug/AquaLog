@@ -3,17 +3,19 @@ import { API_BASE } from "../utils/api";
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { type PoolProfile } from "../hooks/usePoolProfile";
 import { getStatus } from "../utils/status";
-import { LIMITS, type FieldKey } from "../utils/constants";
+import { LIMITS, type FieldKey, type ActiveLimits } from "../utils/constants";
+import { calculateLSI } from "../utils/contextualRisk";
 
 interface Props {
   last: PoolEntry | undefined;
   profile: PoolProfile;
   daysSinceLast: number | null;
+  limits?: ActiveLimits;
 }
 
 const STATUS_DE: Record<string, string> = { ok: "✓ OK", low: "⬇ zu niedrig", high: "⬆ zu hoch" };
 
-export function AiWaterReport({ last, profile, daysSinceLast }: Props) {
+export function AiWaterReport({ last, profile, daysSinceLast, limits }: Props) {
   const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -25,18 +27,26 @@ export function AiWaterReport({ last, profile, daysSinceLast }: Props) {
     setReport(null);
     setError(null);
 
-    const statusLines = (["cl", "ph", "temp", "kh"] as FieldKey[]).flatMap((k) => {
+    const active = limits ?? LIMITS;
+    const statusLines = (["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).flatMap((k) => {
       const val = last[k];
       if (val == null) return [];
-      const st = getStatus(k, val);
-      return [`${LIMITS[k].label}: ${val.toFixed(k === "kh" ? 0 : 1)}${LIMITS[k].unit} (${STATUS_DE[st]}, OK-Bereich: ${LIMITS[k].min}–${LIMITS[k].max}${LIMITS[k].unit})`];
-    }).join("\n");
+      const st = getStatus(k, val, active);
+      return [`${LIMITS[k].label}: ${val.toFixed(k === "kh" || k === "gh" ? 0 : 1)}${LIMITS[k].unit} (${STATUS_DE[st]}, OK-Bereich: ${active[k].min}–${active[k].max}${LIMITS[k].unit})`];
+    });
+    if (last.cya != null) {
+      statusLines.push(`Stabilisator (CYA): ${last.cya} mg/l (Idealbereich: 30–50 mg/l)`);
+    }
+    if (last.gh != null && last.kh != null) {
+      const lsi = calculateLSI(last.ph, last.temp, last.gh, last.kh);
+      statusLines.push(`Langelier-Index (LSI): ${lsi.toFixed(2)} (Idealbereich: −0,3 bis +0,3; <−0,3 korrosiv, >+0,3 kalkbildend)`);
+    }
 
     const userMsg =
       `Pool: ${profile.name}, ${profile.volumeLiters} L, ${profile.poolType}, ${profile.sanitizer}\n` +
       `Standort: ${profile.location}, Nutzung: ${profile.usageFrequency}\n` +
       `Letzte Messung: vor ${daysSinceLast ?? 0} Tag(en)\n\n` +
-      `Aktueller Wasserstatus:\n${statusLines}` +
+      `Aktueller Wasserstatus:\n${statusLines.join("\n")}` +
       (last.note ? `\n\nNotiz: ${last.note}` : "");
 
     const controller = new AbortController();

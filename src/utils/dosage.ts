@@ -1,4 +1,4 @@
-import { LIMITS, type FieldKey } from "./constants";
+import { LIMITS, type FieldKey, type ActiveLimits } from "./constants";
 import { type Status } from "./status";
 
 type Product = "ph_plus" | "ph_minus" | "chlor" | "kh_plus" | "gh_plus";
@@ -24,30 +24,33 @@ export function getTipWithDose(
   key: FieldKey,
   status: Status,
   currentValue: number,
-  volume: number
+  volume: number,
+  limits?: ActiveLimits,
 ): string | null {
-  const target = LIMITS[key];
+  const active = limits ?? LIMITS;
+  const target = active[key];
+  const mid    = (target.min + target.max) / 2;
   const L = Math.round(volume * 1000);
 
   if (key === "cl" && status === "low") {
     const delta = target.max - currentValue;
     const dose = calcDose("chlor", delta, volume);
-    return `⚠️ Chlor zu niedrig (${currentValue} mg/l): Desinfektion unzureichend. Für ${L} L ca. ${dose}g Chlorgranulat zugeben. Pumpe 30 Min. laufen lassen. ⏰ Badepause bis Cl 0,5–1,5 mg/l (typisch 1–2 Std.).`;
+    return `⚠️ Chlor zu niedrig (${currentValue} mg/l): Desinfektion unzureichend. Für ${L} L ca. ${dose}g Chlorgranulat zugeben. Pumpe 30 Min. laufen lassen. ⏰ Badepause bis Cl ${target.min}–${target.max} mg/l (typisch 1–2 Std.).`;
   }
   if (key === "cl" && status === "high")
-    return `⚠️ Chlor zu hoch (${currentValue} mg/l): Abdeckung öffnen, Pumpe laufen lassen. Chlor baut sich von selbst ab. ⏰ Erst wieder nutzen wenn Cl unter 1,5 mg/l.`;
+    return `⚠️ Chlor zu hoch (${currentValue} mg/l): Abdeckung öffnen, Pumpe laufen lassen. Chlor baut sich von selbst ab. ⏰ Erst wieder nutzen wenn Cl unter ${target.max} mg/l.`;
   if (key === "ph" && status === "low") {
-    const dose = calcDose("ph_plus", (7.4 - currentValue) / 0.1, volume);
-    return `⚠️ pH zu niedrig (${currentValue}): Erhöht Korrosionsgefahr und reizt Haut/Augen. pH-Plus zugeben: Für ${L} L ca. ${dose}g langsam einrühren. ⏰ Pumpe 30 Min. → 1 Std. Badepause → pH nachmessen. Ziel: 7,2–7,6.`;
+    const dose = calcDose("ph_plus", (mid - currentValue) / 0.1, volume);
+    return `⚠️ pH zu niedrig (${currentValue}): Erhöht Korrosionsgefahr und reizt Haut/Augen. pH-Plus zugeben: Für ${L} L ca. ${dose}g langsam einrühren. ⏰ Pumpe 30 Min. → 1 Std. Badepause → pH nachmessen. Ziel: ${target.min}–${target.max}.`;
   }
   if (key === "ph" && status === "high") {
-    const dose = calcDose("ph_minus", (currentValue - 7.4) / 0.1, volume);
+    const dose = calcDose("ph_minus", (currentValue - mid) / 0.1, volume);
     return `⚠️ pH zu hoch (${currentValue}): Chlorwirkung stark reduziert! pH-Minus zugeben: Für ${L} L ca. ${dose}g einrühren. ⏰ Pumpe 30 Min. → 4 Std. Badepause → pH nachmessen. Immer pH vor Chlor korrigieren!`;
   }
   if (key === "temp" && status === "low")
-    return `ℹ️ Wassertemperatur niedrig (${currentValue}°C): Wasser noch kalt. Angenehme Badetemperatur: 20–28°C. Chlor ist bei niedrigen Temperaturen stabiler — weniger häufiges Nachdosieren nötig.`;
+    return `ℹ️ Wassertemperatur niedrig (${currentValue}°C): Wasser noch kalt. Zieltemperatur: ${target.min}–${target.max}°C. Chlor ist bei niedrigen Temperaturen stabiler — weniger häufiges Nachdosieren nötig.`;
   if (key === "temp" && status === "high")
-    return `⚠️ Wassertemperatur hoch (${currentValue}°C): Chlorverbrauch steigt deutlich. Häufiger messen. Über 28°C Chlor täglich kontrollieren.`;
+    return `⚠️ Wassertemperatur hoch (${currentValue}°C): Chlorverbrauch steigt deutlich. Häufiger messen. Über ${target.max}°C Chlor täglich kontrollieren.`;
   if (key === "kh" && status === "low") {
     const delta = (target.min - currentValue) / 10;
     const dose = calcDose("kh_plus", delta, volume);

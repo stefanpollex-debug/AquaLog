@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { analyzeTrends, MIN_ENTRIES } from "../utils/trendAnalysis";
+import { type ActiveLimits } from "../utils/constants";
 import { TrendCard } from "./TrendCard";
 
 interface Props {
   entries: PoolEntry[];
+  limits?: ActiveLimits;
 }
 
 function entryDateRange(entries: PoolEntry[]): string {
@@ -17,8 +19,8 @@ function entryDateRange(entries: PoolEntry[]): string {
   return `${entries.length} Messungen über ${days} Tage`;
 }
 
-export function TrendsView({ entries }: Props) {
-  const results  = useMemo(() => analyzeTrends(entries), [entries]);
+export function TrendsView({ entries, limits }: Props) {
+  const results  = useMemo(() => analyzeTrends(entries, limits), [entries, limits]);
   const missing  = MIN_ENTRIES - entries.length;
 
   // Kontextuelle Karten (Sicherheitswarnungen) — immer anzeigen
