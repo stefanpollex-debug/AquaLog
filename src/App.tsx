@@ -18,7 +18,7 @@ import { assessRisk, formatRetestIn, calculateLSI }                from "./utils
 
 import { PinScreen }         from "./components/PinScreen";
 import { OnboardingFlow }    from "./components/OnboardingFlow";
-import { PhotoScanner }      from "./components/PhotoScanner";
+import { PhotoScanner, type PhotoScanResult } from "./components/PhotoScanner";
 import { ValueSlider }       from "./components/ValueSlider";
 import { StatCard }          from "./components/StatCard";
 import { DeleteConfirm }     from "./components/DeleteConfirm";
@@ -76,9 +76,23 @@ export default function App() {
     setForm((f) => ({ ...f, [k]: v }));
   };
 
-  const handleAiResult = ({ cl, ph, temp }: { cl: number; ph: number; temp: number | null }) => {
-    setForm((f) => ({ ...f, cl, ph, ...(temp != null ? { temp } : {}) }));
-    setTouched((t) => ({ ...t, cl: true, ph: true, ...(temp != null ? { temp: true } : {}) }));
+  const handleAiResult = ({ cl, ph, temp, kh, gh, cya }: PhotoScanResult) => {
+    setForm((f) => ({
+      ...f, cl, ph,
+      ...(temp != null ? { temp } : {}),
+      ...(kh != null ? { kh } : {}),
+      ...(gh != null ? { gh } : {}),
+    }));
+    setTouched((t) => ({
+      ...t, cl: true, ph: true,
+      ...(temp != null ? { temp: true } : {}),
+      ...(kh != null ? { kh: true } : {}),
+      ...(gh != null ? { gh: true } : {}),
+    }));
+    if (cya != null) {
+      setCyaValue(cya);
+      setCyaTouched(true);
+    }
   };
 
   const canSave = touched.cl && touched.ph && touched.temp;
@@ -502,24 +516,24 @@ export default function App() {
                     <div style={{ position: "relative", height: 28, display: "flex", alignItems: "center" }}>
                       <div style={{
                         position: "absolute", left: 0, right: 0, height: 8, borderRadius: 8, overflow: "hidden",
-                        background: "linear-gradient(to right,#fee2e2 0%,#fee2e2 20%,#d1fae5 20%,#d1fae5 33%,#fef3c7 33%,#fef3c7 67%,#fee2e2 67%,#fee2e2 100%)",
+                        background: "linear-gradient(to right,#fee2e2 0%,#fee2e2 10%,#d1fae5 10%,#d1fae5 16.7%,#fef3c7 16.7%,#fef3c7 33.3%,#fee2e2 33.3%,#fee2e2 100%)",
                         opacity: cyaTouched ? 1 : 0.4,
                       }} />
                       {cyaTouched && (
                         <div style={{
-                          position: "absolute", left: 0, width: `${(cyaValue / 150) * 100}%`, height: 8, borderRadius: 8,
+                          position: "absolute", left: 0, width: `${(cyaValue / 300) * 100}%`, height: 8, borderRadius: 8,
                           background: cyaValue > 100 ? "#ef4444" : cyaValue > 90 ? "#f59e0b" : "#22c55e",
                           transition: "width 0.1s, background 0.2s", opacity: 0.75,
                         }} />
                       )}
                       <input
-                        type="range" min={0} max={150} step={5} value={cyaValue}
+                        type="range" min={0} max={300} step={5} value={cyaValue}
                         onChange={(e) => { setCyaValue(parseInt(e.target.value)); setCyaTouched(true); }}
                         style={{ position: "absolute", left: 0, right: 0, width: "100%", opacity: 0, height: 28, cursor: "pointer", zIndex: 2 }}
                       />
                       <div style={{
                         position: "absolute",
-                        left: cyaTouched ? `calc(${(cyaValue / 150) * 100}% - 11px)` : "calc(50% - 11px)",
+                        left: cyaTouched ? `calc(${(cyaValue / 300) * 100}% - 11px)` : "calc(50% - 11px)",
                         width: 22, height: 22, borderRadius: "50%",
                         background: cyaTouched ? (cyaValue > 100 ? "#ef4444" : cyaValue > 90 ? "#f59e0b" : "#22c55e") : "#cbd5e1",
                         border: "3px solid white",
@@ -530,7 +544,7 @@ export default function App() {
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "#94a3b8", marginTop: 2 }}>
                       <span>0 mg/l</span>
                       <span style={{ color: "#22c55e", fontWeight: 600 }}>Ideal: 30–50 mg/l</span>
-                      <span>150 mg/l</span>
+                      <span>300 mg/l</span>
                     </div>
                   </div>
                 </div>

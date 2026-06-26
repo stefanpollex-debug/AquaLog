@@ -8,12 +8,24 @@ interface AiResult {
   cl: number;
   ph: number;
   temp: number | null;
+  kh: number | null;
+  gh: number | null;
+  cya: number | null;
   confidence: "low" | "medium" | "high";
   notes?: string;
 }
 
+export interface PhotoScanResult {
+  cl: number;
+  ph: number;
+  temp: number | null;
+  kh: number | null;
+  gh: number | null;
+  cya: number | null;
+}
+
 interface Props {
-  onResult: (vals: { cl: number; ph: number; temp: number | null }) => void;
+  onResult: (vals: PhotoScanResult) => void;
   limits?: ActiveLimits;
 }
 
@@ -80,23 +92,30 @@ export function PhotoScanner({ onResult, limits }: Props) {
           max_tokens: 1000,
           system: `Du bist ein Pool-Wassertest-Experte. Analysiere das Foto. Es kann einen Teststreifen UND/ODER ein Thermometer enthalten.
 
-Teststreifen-Farbskala:
-- Chlor (Cl): 0.0=farblos/weiß, 0.3=sehr helles pink, 0.6=helles pink, 1.0=mittleres rose, 1.5=kräftiges pink, 2.0=magenta
-- pH: 6.2=gelb, 6.6=hellgelb-orange, 7.0=orange, 7.4=mittleres orange, 7.8=dunkles orange, 8.2=rot-orange
+Teststreifen-Typ: Bayrol Cl & Br Quicktest 6in1 — 5 Testfelder von oben nach unten am Streifen: Chlor, pH, Alkalinität (TA), Härte (TH), Stabilisator (CYA). (Ein optionales Br-Feld für Bromin existiert auf dem Streifen, wird hier nicht ausgewertet.)
+
+Teststreifen-Farbskala — interpoliere zwischen den Referenzpunkten, wenn die Farbe dazwischen liegt:
+- Chlor (Cl, mg/l): 0.0=fast farblos/cremeweiß, 0.5=sehr helles Rosa, 1.0=helles Rosa, 2.0=mittleres Pink/Rosé, 5.0=kräftiges Pink-Magenta
+- pH: 6.6=Gelb/Goldgelb, 7.0=Orange, 7.4=Orange-Rot/Koralle, 7.8=Rot, 8.2=Magenta-Rot
+- Alkalinität/KH (mg/l): 0=helles Gelb-Oliv, 40=Olivgrün, 80=mittleres Olivgrün, 120=dunkleres Grau-Grün, 180=Grau
+- Gesamthärte/GH (mg/l): 0=Oliv/Khaki-Grau, 75=dunkles Oliv-Braun, 150=Ziegelrot, 250=Rot-Orange, 425=kräftiges Orange-Rot
+- Stabilisator/CYA (mg/l): 0=Gold-Orange, 50=Orange, 100=dunkleres Orange-Rot, 150=Rot-Orange, 300=kräftiges Orange-Rot
+
+Lies KH, GH und CYA nur ab, wenn die entsprechenden Testfelder im Foto klar erkennbar und nicht verdeckt/unscharf sind. Falls ein Feld nicht zuverlässig lesbar ist, setze den Wert auf null statt zu raten.
 
 Thermometer: Lies die angezeigte Temperatur in Grad Celsius ab. Falls kein Thermometer sichtbar, setze "temp": null.
 
 Berücksichtige den zusätzlichen Kontext bei der Einschätzung der Messwerte und der notes.
 
 Antworte NUR mit JSON ohne Backticks:
-{"cl":<Zahl>,"ph":<Zahl>,"temp":<Zahl oder null>,"confidence":"low|medium|high","notes":"<kurze Beschreibung was du siehst und was der Kontext bedeutet>"}
+{"cl":<Zahl>,"ph":<Zahl>,"temp":<Zahl oder null>,"kh":<Zahl oder null>,"gh":<Zahl oder null>,"cya":<Zahl oder null>,"confidence":"low|medium|high","notes":"<kurze Beschreibung was du siehst und was der Kontext bedeutet>"}
 
 Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
           messages: [{
             role:    "user",
             content: [
               { type: "image", source: { type: "base64", media_type: mt, data: b64 } },
-              { type: "text",  text: `Analysiere Teststreifen und Thermometer (falls vorhanden) auf diesem Foto. ${contextStr}`.trim() },
+              { type: "text",  text: `Analysiere den Teststreifen (Cl, pH, KH, GH, CYA falls erkennbar) und Thermometer (falls vorhanden) auf diesem Foto. ${contextStr}`.trim() },
             ],
           }],
         }),
@@ -198,7 +217,10 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
 
   const accept = () => {
     if (!aiResult) return;
-    onResult({ cl: aiResult.cl, ph: aiResult.ph, temp: aiResult.temp });
+    onResult({
+      cl: aiResult.cl, ph: aiResult.ph, temp: aiResult.temp,
+      kh: aiResult.kh, gh: aiResult.gh, cya: aiResult.cya,
+    });
     setState("idle"); setPreview(null); setAi(null); setPendingB64(null);
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -236,7 +258,7 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
               Teststreifen fotografieren
             </div>
             <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 3 }}>
-              KI liest Cl, pH und Temperatur automatisch aus
+              KI liest Cl, pH, KH, GH, CYA und Temperatur automatisch aus
             </div>
           </div>
           <button onClick={openGallery} type="button"
@@ -374,6 +396,26 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
                 <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Temperatur</div>
                 <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{aiResult.temp}°C</div>
                 <StatusBadge status={getStatus("temp", aiResult.temp, limits)} />
+              </div>
+            )}
+            {aiResult.kh != null && (
+              <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", flex: 1 }}>
+                <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Alkalinität (KH)</div>
+                <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{aiResult.kh}mg/l</div>
+                <StatusBadge status={getStatus("kh", aiResult.kh, limits)} />
+              </div>
+            )}
+            {aiResult.gh != null && (
+              <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", flex: 1 }}>
+                <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Gesamthärte (GH)</div>
+                <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{aiResult.gh}mg/l</div>
+                <StatusBadge status={getStatus("gh", aiResult.gh, limits)} />
+              </div>
+            )}
+            {aiResult.cya != null && (
+              <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", flex: 1 }}>
+                <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Stabilisator (CYA)</div>
+                <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{aiResult.cya}mg/l</div>
               </div>
             )}
           </div>
