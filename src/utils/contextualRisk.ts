@@ -91,21 +91,30 @@ export function assessRisk(
 
   // ── 1. Temperatur-Grenzwerte ────────────────────────────────────────────
 
-  if (temp > 42) {
-    // Kritisch — jenseits jeder Nutzung
+  // Harte Gefahrenschwelle: pool-typ-spezifisch falls hinterlegt (z.B. Outdoor-Spa 37°C,
+  // da unbeheizt ungewöhnlich heiß = Sonnenüberhitzung), sonst genereller Fallback 42°C.
+  const tempDangerHigh = activeLimits.temp.danger?.high ?? 42;
+  let tempFlagged = false;
+
+  if (temp > tempDangerHigh) {
+    // Kritisch — jenseits jeder Nutzung, unabhängig vom Chlorwert
+    tempFlagged = true;
     promote("danger");
-    reasons.push(`🚨 Wassertemperatur ${temp.toFixed(0)}°C ist gefährlich hoch — Spa sofort ausschalten`);
-    urgentActions.push("Spa sofort ausschalten und kontrolliert abkühlen lassen");
+    reasons.push(
+      `🚨 Wassertemperatur ${temp.toFixed(0)}°C über der Gefahrenschwelle (${tempDangerHigh}°C) — sofort handeln`
+    );
+    urgentActions.push("Abdeckung/Sonnenschutz nutzen, Wasser kontrolliert abkühlen lassen, Nutzung pausieren");
 
   } else if (temp >= 35) {
-    // Legionellen-Wachstumsbereich 35–42°C
+    // Legionellen-Wachstumsbereich 35–42°C — biologisch fix, unabhängig vom Pool-Typ
+    tempFlagged = true;
     if (cl < 1.5) {
       promote("danger");
       reasons.push(
         `🦠 Legionellen-Risiko: Bei ${temp.toFixed(0)}°C reicht Chlor unter 1,5 mg/l nicht aus ` +
         `(aktuell ${cl.toFixed(2)} mg/l)`
       );
-      urgentActions.push("Chlor sofort auf ≥ 1,5 mg/l erhöhen — Spa NICHT benutzen");
+      urgentActions.push("Chlor sofort auf ≥ 1,5 mg/l erhöhen — nicht benutzen");
     } else {
       promote("caution");
     }
@@ -115,15 +124,35 @@ export function assessRisk(
       `Nicht einatmen, nicht benutzen bis Temperatur unter 32°C.`
     );
 
-  } else if (temp > 32) {
+  } else if (temp > activeLimits.temp.max) {
+    tempFlagged = true;
     promote("caution");
-    reasons.push(`⚠️ Spa-Temperatur zu hoch (${temp.toFixed(0)}°C) — Nutzung nicht empfohlen`);
+    reasons.push(
+      `⚠️ Temperatur über dem Zielbereich (${temp.toFixed(0)}°C, ` +
+      `Ziel: ${activeLimits.temp.min}–${activeLimits.temp.max}°C)`
+    );
   } else if (temp < activeLimits.temp.min) {
+    tempFlagged = true;
     promote("caution");
     reasons.push(
       `🌡️ Temperatur noch unter dem Zielbereich (${temp.toFixed(1)}°C, ` +
       `Ziel: ${activeLimits.temp.min}–${activeLimits.temp.max}°C)`
     );
+  }
+
+  // Idealzone-Hinweis für Temperatur — rein informativ, analog zu Chlor.
+  if (!tempFlagged && activeLimits.temp.ideal) {
+    const { min: idealMin, max: idealMax } = activeLimits.temp.ideal;
+    if (temp < idealMin) {
+      reasons.push(
+        `💡 Temperatur im sicheren Bereich (${temp.toFixed(1)}°C) — Idealzone: ${idealMin}–${idealMax}°C`
+      );
+    } else if (temp > idealMax) {
+      reasons.push(
+        `💡 Temperatur im sicheren Bereich (${temp.toFixed(1)}°C), etwas über der Idealzone ` +
+        `(${idealMin}–${idealMax}°C)`
+      );
+    }
   }
 
   // ── 2. Chlor mit Temperatur-Kontext ────────────────────────────────────

@@ -34,7 +34,13 @@ export function getLimitsForPoolType(poolType: string): Record<FieldKey, FieldLi
         danger: { high: 3.0 },
       },
       ph:   { ...LIMITS.ph,   min: 7.2, max: 7.8 },
-      temp: { ...LIMITS.temp, min: 34,  max: 40  },
+      // Outdoor-Spa, nicht beheizter Whirlpool — 18–32°C Zielband, 24–28°C Idealzone,
+      // ab 37°C harte Gefahrenschwelle (Legionellen-Bereich).
+      temp: {
+        ...LIMITS.temp, min: 18, max: 32,
+        ideal:  { min: 24, max: 28 },
+        danger: { high: 37 },
+      },
     };
   }
   return {
