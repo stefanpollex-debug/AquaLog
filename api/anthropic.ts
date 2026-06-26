@@ -1,4 +1,5 @@
 export const config = { runtime: "edge" };
+export const maxDuration = 60; // Vercel-Default für Edge Functions ist niedriger als das Client-Timeout — Foto-Analyse mit Vision-Modell braucht teils >25s
 
 const ALLOWED_MODELS = new Set(["claude-sonnet-4-6"]);
 const MAX_TOKENS_CAP = 1200;

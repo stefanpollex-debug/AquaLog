@@ -80,7 +80,7 @@ export function PhotoScanner({ onResult, limits }: Props) {
     const controller = new AbortController();
     abortRef.current = controller;
     let timedOut = false;
-    const timeoutId = setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
+    const timeoutId = setTimeout(() => { timedOut = true; controller.abort(); }, 55_000);
 
     try {
       const res = await fetch(`${API_BASE}/api/anthropic`, {
