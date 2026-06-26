@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePoolEntries, type PoolEntry } from "../hooks/usePoolEntries";
+import { localToday } from "../utils/status";
 import {
   analyzeProfiles,
   getSmartReminders,
@@ -59,7 +60,7 @@ function MiniEntryForm({ label, icon, phDefault, clDefault, clOptional, onSave }
   const [open, setOpen]   = useState(false);
   const [ph, setPh]       = useState(phDefault);
   const [cl, setCl]       = useState(clDefault);
-  const [date, setDate]   = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate]   = useState(localToday());
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {

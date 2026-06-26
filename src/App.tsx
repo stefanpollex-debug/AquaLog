@@ -11,7 +11,7 @@ import { usePinLock }        from "./hooks/usePinLock";
 import { useSwUpdate }       from "./hooks/useSwUpdate";
 import { useOnboarding }     from "./hooks/useOnboarding";
 import { LIMITS, STALE_DAYS, getLimitsForPoolType, type FieldKey } from "./utils/constants";
-import { getStatus, daysSince }                                    from "./utils/status";
+import { getStatus, daysSince, localToday }                        from "./utils/status";
 import { getTipWithDose }                                          from "./utils/dosage";
 import { getWeatherPoolHints, getWmoIcon }                         from "./utils/weather";
 import { assessRisk, formatRetestIn, calculateLSI }                from "./utils/contextualRisk";
@@ -59,7 +59,7 @@ export default function App() {
   const filterLog   = useFilterLog();
   const { weather, loading: wxLoading, minutesAgo } = useWeather();
 
-  const [form, setForm]       = useState({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
+  const [form, setForm]       = useState({ date: localToday(), note: "", ...DEFAULT_VALUES });
   const [touched, setTouched] = useState<Record<FieldKey, boolean>>({ cl: false, ph: false, temp: false, kh: false, gh: false });
   const [cyaValue, setCyaValue]   = useState(50);
   const [cyaTouched, setCyaTouched] = useState(false);
@@ -125,7 +125,7 @@ export default function App() {
       // Chemikalien
       ...(chemicals.length > 0 ? { chemicals } : {}),
     });
-    setForm({ date: new Date().toISOString().slice(0, 10), note: "", ...DEFAULT_VALUES });
+    setForm({ date: localToday(), note: "", ...DEFAULT_VALUES });
     setTouched({ cl: false, ph: false, temp: false, kh: false, gh: false });
     setCyaValue(50);
     setCyaTouched(false);
@@ -150,7 +150,7 @@ export default function App() {
 
   // ── Browser-Benachrichtigungen (PWA) ─────────────────────────────────────
   const notify = useCallback((_id: number, storageKey: string, body: string) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localToday();
     if (localStorage.getItem(storageKey) === today) return;
     localStorage.setItem(storageKey, today);
     if ("Notification" in window && Notification.permission === "granted") {

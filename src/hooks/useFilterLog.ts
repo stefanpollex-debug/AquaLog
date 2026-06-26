@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { get, set } from "idb-keyval";
+import { localToday } from "../utils/status";
 import {
   type FilterEntry, type FilterSettings,
   DEFAULT_FILTER_SETTINGS,
@@ -29,7 +30,7 @@ export function useFilterLog() {
 
   const addEntry = (type: FilterEntry["type"], note?: string) =>
     setLog(prev => [
-      { id: Date.now(), date: new Date().toISOString().slice(0, 10), type, note },
+      { id: Date.now(), date: localToday(), type, note },
       ...prev,
     ]);
 

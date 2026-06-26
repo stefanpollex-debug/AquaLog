@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { get, set } from "idb-keyval";
+import { localToday } from "../utils/status";
 import {
   type WaterChangeRecord, type WaterAddition,
   DEFAULT_WATER_CHANGE,
@@ -33,7 +34,7 @@ export function useWaterChange() {
   const addEntry = (litersAdded: number, note?: string) => {
     const addition: WaterAddition = {
       id:          Date.now(),
-      date:        new Date().toISOString().slice(0, 10),
+      date:        localToday(),
       litersAdded,
       note,
     };

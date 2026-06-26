@@ -1,4 +1,5 @@
 import type { PoolEntry } from "../hooks/usePoolEntries";
+import { localToday } from "./status";
 
 // ── Typen ────────────────────────────────────────────────────────────────────
 
@@ -216,7 +217,7 @@ export function getSmartReminders(
   lastRainMm: number,           // heutiger Niederschlag aus Wetter-API
 ): SmartReminder[] {
   const reminders: SmartReminder[] = [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const last  = spaEntries[0];
 
   // Starkregen gestern / heute → pH prüfen

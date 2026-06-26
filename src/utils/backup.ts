@@ -6,6 +6,7 @@ import { type WaterChangeRecord }  from "./waterChange";
 import { type PoolProfile }        from "../hooks/usePoolProfile";
 import { LIMITS, getLimitsForPoolType, type FieldKey, type ActiveLimits } from "./constants";
 import { calculateLSI } from "./contextualRisk";
+import { localToday } from "./status";
 
 export interface AppSettings {
   profile:         PoolProfile;
@@ -23,7 +24,7 @@ export interface AquaLogBackup {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localToday();
 }
 
 function triggerDownload(blob: Blob, filename: string): void {
