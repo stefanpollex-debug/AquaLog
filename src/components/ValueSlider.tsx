@@ -17,15 +17,26 @@ export function ValueSlider({ field, value, touched, onChange, limits }: Props) 
   const okL = ((l.min  - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100;
   const okR = ((l.max  - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100;
   const st  = getStatus(field, value, limits);
-  const thumb = st === "ok" ? "#22c55e" : st === "low" ? "#f59e0b" : "#ef4444";
+  // Explizite Zuordnung statt Ternary-Kette — eine Kette mit "sonst rot" als Default
+  // hätte einen neuen Status (z.B. "warn") stillschweigend rot statt gelb eingefärbt.
+  const THUMB_COLOR: Record<typeof st, string> = { ok: "#22c55e", low: "#f59e0b", warn: "#f59e0b", high: "#ef4444" };
+  const thumb = THUMB_COLOR[st];
 
-  // Engere Idealzone innerhalb von min–max, falls hinterlegt (z.B. Spa-Chlor 0.6–1.0 mg/l
-  // innerhalb des breiteren 0.3–1.5 mg/l Zielbands) — als kräftigeres Grün abgesetzt.
+  // Engere Idealzone (gutes Grün) oder Warnzone (Gelb statt Grün) innerhalb von min–max,
+  // falls hinterlegt — z.B. Spa-Chlor-Idealzone 0.6–1.0 mg/l, oder KH-Warnzone 100–120 mg/l.
   const idealL = l.ideal ? ((l.ideal.min - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100 : null;
   const idealR = l.ideal ? ((l.ideal.max - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100 : null;
-  const trackBackground = (idealL != null && idealR != null)
-    ? `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${idealL}%,#4ade80 ${idealL}%,#4ade80 ${idealR}%,#d1fae5 ${idealR}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`
-    : `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`;
+  const warnL  = l.warningZone ? ((l.warningZone.min - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100 : null;
+  const warnR  = l.warningZone ? ((l.warningZone.max - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100 : null;
+
+  let trackBackground: string;
+  if (idealL != null && idealR != null) {
+    trackBackground = `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${idealL}%,#4ade80 ${idealL}%,#4ade80 ${idealR}%,#d1fae5 ${idealR}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`;
+  } else if (warnL != null && warnR != null) {
+    trackBackground = `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${warnL}%,#fde68a ${warnL}%,#fde68a ${warnR}%,#d1fae5 ${warnR}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`;
+  } else {
+    trackBackground = `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`;
+  }
 
   return (
     <div style={{ marginTop: 6 }}>
@@ -68,7 +79,9 @@ export function ValueSlider({ field, value, touched, onChange, limits }: Props) 
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "#94a3b8", marginTop: 2 }}>
         <span>{base.sliderMin}{base.unit}</span>
         <span style={{ color: "#22c55e", fontWeight: 600 }}>
-          OK: {l.min}–{l.max}{l.ideal ? ` · Ideal: ${l.ideal.min}–${l.ideal.max}` : ""}
+          OK: {l.min}–{l.max}
+          {l.ideal ? ` · Ideal: ${l.ideal.min}–${l.ideal.max}` : ""}
+          {l.warningZone ? <span style={{ color: "#b45309" }}> · Grenzwertig ab {l.warningZone.min}</span> : ""}
         </span>
         <span>{base.sliderMax}{base.unit}</span>
       </div>

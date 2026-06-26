@@ -8,6 +8,7 @@ const MAP: Record<Status, { bg: string; color: string; label: string }> = {
   ok:   { bg: "#d1fae5", color: "#065f46", label: "✓ OK" },
   low:  { bg: "#fef3c7", color: "#92400e", label: "↓ Zu niedrig" },
   high: { bg: "#fee2e2", color: "#991b1b", label: "↑ Zu hoch" },
+  warn: { bg: "#fef3c7", color: "#92400e", label: "⚠ Grenzwertig" },
 };
 
 export function StatusBadge({ status }: Props) {

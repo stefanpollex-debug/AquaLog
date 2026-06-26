@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { API_BASE } from "../utils/api";
 import { type PoolEntry } from "../hooks/usePoolEntries";
 import { type PoolProfile } from "../hooks/usePoolProfile";
-import { getStatus } from "../utils/status";
+import { getStatus, type Status } from "../utils/status";
 import { LIMITS, type FieldKey, type ActiveLimits } from "../utils/constants";
 import { calculateLSI } from "../utils/contextualRisk";
 
@@ -13,7 +13,9 @@ interface Props {
   limits?: ActiveLimits;
 }
 
-const STATUS_DE: Record<string, string> = { ok: "✓ OK", low: "⬇ zu niedrig", high: "⬆ zu hoch" };
+// Record<Status,...> statt Record<string,...> — fehlender Status-Schlüssel fällt
+// jetzt als Typfehler auf statt als "undefined" im KI-Prompt zu landen.
+const STATUS_DE: Record<Status, string> = { ok: "✓ OK", low: "⬇ zu niedrig", high: "⬆ zu hoch", warn: "⚠ grenzwertig" };
 
 export function AiWaterReport({ last, profile, daysSinceLast, limits }: Props) {
   const [report, setReport] = useState<string | null>(null);

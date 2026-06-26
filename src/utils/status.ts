@@ -1,11 +1,12 @@
 import { LIMITS, type FieldKey, type ActiveLimits } from "./constants";
 
-export type Status = "ok" | "low" | "high";
+export type Status = "ok" | "low" | "high" | "warn";
 
 export function getStatus(key: FieldKey, value: number, limits?: ActiveLimits): Status {
   const l = (limits ?? LIMITS)[key];
   if (value < l.min) return "low";
   if (value > l.max) return "high";
+  if (l.warningZone && value >= l.warningZone.min && value <= l.warningZone.max) return "warn";
   return "ok";
 }
 

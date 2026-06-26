@@ -278,6 +278,13 @@ export function assessRisk(
       `🧪 KH (Alkalinität) außerhalb des Zielbereichs (${kh} mg/l, ` +
       `Ziel: ${activeLimits.kh.min}–${activeLimits.kh.max} mg/l)`
     );
+  } else if (kh != null && activeLimits.kh.warningZone &&
+             kh >= activeLimits.kh.warningZone.min && kh <= activeLimits.kh.warningZone.max) {
+    // Grenzwertig, aber noch im Zielbereich — rein informativ, keine Risikostufe.
+    reasons.push(
+      `💡 KH grenzwertig (${kh} mg/l) — am oberen Rand des Zielbereichs, pH wird zunehmend träge. ` +
+      `Bei Gelegenheit beobachten.`
+    );
   }
   if (gh != null && (gh < activeLimits.gh.min || gh > activeLimits.gh.max)) {
     promote("caution");

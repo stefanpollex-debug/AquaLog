@@ -9,13 +9,18 @@ export interface FieldLimit {
   unit: string; label: string; color: string;
   ideal?: IdealRange;
   danger?: DangerThreshold;
+  /** Engere Zone INNERHALB von min–max, die technisch noch "ok" ist, aber als
+   *  grenzwertig markiert wird (gelb statt grün) — z.B. KH am oberen Rand. */
+  warningZone?: IdealRange;
 }
 
 export const LIMITS: Record<"cl" | "ph" | "temp" | "kh" | "gh", FieldLimit> = {
   cl:   { min: 0.5, max: 1.5, step: 0.1,  sliderMin: 0,   sliderMax: 5,   unit: "mg/l", label: "Chlor (Cl)",       color: "#0ea5e9" },
   ph:   { min: 7.2, max: 7.6, step: 0.05, sliderMin: 6.5, sliderMax: 8.5, unit: "",     label: "pH-Wert",          color: "#8b5cf6" },
   temp: { min: 20,  max: 28,  step: 0.5,  sliderMin: 10,  sliderMax: 45,  unit: "°C",   label: "Temperatur",       color: "#f97316" },
-  kh:   { min: 80,  max: 120, step: 5,    sliderMin: 20,  sliderMax: 250, unit: "mg/l", label: "Alkalinität (KH)", color: "#10b981" },
+  // KH 120 ist oberes Limit — 100–120 mg/l als grenzwertig markiert (gelb statt grün),
+  // da pH bei Annäherung an 120 zunehmend träge/schwer korrigierbar wird.
+  kh:   { min: 80,  max: 120, step: 5,    sliderMin: 20,  sliderMax: 250, unit: "mg/l", label: "Alkalinität (KH)", color: "#10b981", warningZone: { min: 100, max: 120 } },
   gh:   { min: 100, max: 200, step: 10,   sliderMin: 50,  sliderMax: 500, unit: "mg/l", label: "Gesamthärte (GH)", color: "#f472b6" },
 };
 
