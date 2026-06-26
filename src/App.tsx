@@ -76,21 +76,29 @@ export default function App() {
     setForm((f) => ({ ...f, [k]: v }));
   };
 
+  // Schützt vor unsinnigen KI-Ausreißern (z.B. Foto-Fehlinterpretation) — begrenzt
+  // auf den Slider-Bereich, statt unvalidierte Werte in LSI/Risikobewertung einfließen zu lassen.
+  const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+
   const handleAiResult = ({ cl, ph, temp, kh, gh, cya }: PhotoScanResult) => {
+    const khClamped  = kh  != null ? clamp(kh,  LIMITS.kh.sliderMin,  LIMITS.kh.sliderMax)  : null;
+    const ghClamped  = gh  != null ? clamp(gh,  LIMITS.gh.sliderMin,  LIMITS.gh.sliderMax)  : null;
+    const cyaClamped = cya != null ? clamp(cya, 0, 300) : null;
+
     setForm((f) => ({
       ...f, cl, ph,
       ...(temp != null ? { temp } : {}),
-      ...(kh != null ? { kh } : {}),
-      ...(gh != null ? { gh } : {}),
+      ...(khClamped != null ? { kh: khClamped } : {}),
+      ...(ghClamped != null ? { gh: ghClamped } : {}),
     }));
     setTouched((t) => ({
       ...t, cl: true, ph: true,
       ...(temp != null ? { temp: true } : {}),
-      ...(kh != null ? { kh: true } : {}),
-      ...(gh != null ? { gh: true } : {}),
+      ...(khClamped != null ? { kh: true } : {}),
+      ...(ghClamped != null ? { gh: true } : {}),
     }));
-    if (cya != null) {
-      setCyaValue(cya);
+    if (cyaClamped != null) {
+      setCyaValue(cyaClamped);
       setCyaTouched(true);
     }
   };
@@ -106,7 +114,7 @@ export default function App() {
       temp: +form.temp,
       ...(touched.kh ? { kh: +form.kh } : {}),
       ...(touched.gh ? { gh: +form.gh } : {}),
-      ...(!isSpa && cyaTouched ? { cya: cyaValue } : {}),
+      ...(cyaTouched ? { cya: cyaValue } : {}),
       note: form.note,
       // Wetter automatisch speichern (Temp + UV + heutiger Tages-Niederschlag)
       ...(weather ? {
@@ -486,8 +494,10 @@ export default function App() {
                 </div>
               ))}
 
-              {/* CYA-Slider — nur für Freibäder, nicht für Spas */}
-              {!isSpa && (
+              {/* CYA-Slider — standardmäßig nur für Freibäder, aber sichtbar sobald die KI
+                  per Foto einen Wert erkannt hat (auch bei Spa) — sonst würde ein erkannter
+                  Wert kommentarlos verworfen statt dem Nutzer zur Bestätigung gezeigt zu werden. */}
+              {(!isSpa || cyaTouched) && (
                 <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>
