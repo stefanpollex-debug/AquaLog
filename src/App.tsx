@@ -341,9 +341,13 @@ export default function App() {
                       : riskAssessment.overallRisk === "caution" ? "Vorsicht"
                       : "Wasserqualität OK"}
                     </div>
-                    <div style={{ opacity: 0.92, lineHeight: 1.45 }}>
-                      {riskAssessment.reasons[0]}
-                    </div>
+                    {/* Alle Gründe zeigen, nicht nur den ersten — sonst verschwinden niedrigprio
+                        Hinweise (z.B. Idealzone-Tipp) hinter einer vorrangigen Warnung. */}
+                    {riskAssessment.reasons.map((r, i) => (
+                      <div key={i} style={{ opacity: 0.92, lineHeight: 1.45, marginTop: i > 0 ? 3 : 0 }}>
+                        {r}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

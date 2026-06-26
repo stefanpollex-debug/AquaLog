@@ -128,7 +128,10 @@ export function assessRisk(
 
   // ── 2. Chlor mit Temperatur-Kontext ────────────────────────────────────
 
+  let clFlagged = false;
+
   if (cl < minCl) {
+    clFlagged = true;
     const deficit = (minCl - cl).toFixed(2);
     if (cl < minCl * 0.5) {
       promote("danger");
@@ -155,6 +158,7 @@ export function assessRisk(
   // falls für den Pool-Typ eine explizite Quelle hinterlegt ist.
   const clDangerHigh = activeLimits.cl.danger?.high ?? activeLimits.cl.max * 1.5;
   if (cl > activeLimits.cl.max) {
+    clFlagged = true;
     if (cl >= clDangerHigh) {
       promote("danger");
       reasons.push(
@@ -167,6 +171,22 @@ export function assessRisk(
       reasons.push(
         `⚠️ Chlor erhöht (${cl.toFixed(2)} mg/l) — Idealbereich: ` +
         `${activeLimits.cl.min}–${activeLimits.cl.max} mg/l`
+      );
+    }
+  }
+
+  // Idealzone-Hinweis — rein informativ, keine Risikostufe. Nur wenn Cl bereits sicher ist
+  // (weder zu niedrig noch zu hoch), aber außerhalb der engeren Idealzone liegt.
+  if (!clFlagged && activeLimits.cl.ideal) {
+    const { min: idealMin, max: idealMax } = activeLimits.cl.ideal;
+    if (cl < idealMin) {
+      reasons.push(
+        `💡 Chlor im sicheren Bereich (${cl.toFixed(2)} mg/l) — Idealzone: ${idealMin}–${idealMax} mg/l`
+      );
+    } else if (cl > idealMax) {
+      reasons.push(
+        `💡 Chlor im sicheren Bereich (${cl.toFixed(2)} mg/l), etwas über der Idealzone ` +
+        `(${idealMin}–${idealMax} mg/l) — leicht verdünnen für optimale Werte`
       );
     }
   }
