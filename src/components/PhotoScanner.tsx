@@ -107,17 +107,22 @@ Thermometer: Lies die angezeigte Temperatur in Grad Celsius ab. Falls kein Therm
 
 Berücksichtige den zusätzlichen Kontext bei der Einschätzung der Messwerte und der notes.
 
-Antworte NUR mit JSON ohne Backticks:
+WICHTIG: Gib KEINE Schritt-für-Schritt-Analyse, Begründung oder Markdown-Formatierung als Text aus. Antworte ausschließlich mit dem rohen JSON-Objekt — kein Text davor, kein Text danach, keine Backticks:
 {"cl":<Zahl>,"ph":<Zahl>,"temp":<Zahl oder null>,"kh":<Zahl oder null>,"gh":<Zahl oder null>,"cya":<Zahl oder null>,"confidence":"low|medium|high","notes":"<kurze Beschreibung was du siehst und was der Kontext bedeutet>"}
 
 Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
-          messages: [{
-            role:    "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: mt, data: b64 } },
-              { type: "text",  text: `Analysiere den Teststreifen (Cl, pH, KH, GH, CYA falls erkennbar) und Thermometer (falls vorhanden) auf diesem Foto. ${contextStr}`.trim() },
-            ],
-          }],
+          messages: [
+            {
+              role:    "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: mt, data: b64 } },
+                { type: "text",  text: `Analysiere den Teststreifen (Cl, pH, KH, GH, CYA falls erkennbar) und Thermometer (falls vorhanden) auf diesem Foto. ${contextStr}`.trim() },
+              ],
+            },
+            // Assistant-Prefill: erzwingt JSON-Start technisch, statt nur per Anweisung zu hoffen —
+            // verhindert die "Ich analysiere Feld für Feld..."-Prosa-Antwort zuverlässig.
+            { role: "assistant", content: "{" },
+          ],
         }),
       });
       clearTimeout(timeoutId);
@@ -136,8 +141,10 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
         setState("error"); setErrMsg(`API-Fehler: ${apiErr}`); return;
       }
       const content = d.content as Array<{ type: string; text?: string }> | undefined;
-      const text    = content?.find(b => b.type === "text")?.text ?? "";
-      if (!text) { setState("error"); setErrMsg("Leere Antwort von KI erhalten."); return; }
+      const rawText = content?.find(b => b.type === "text")?.text ?? "";
+      if (!rawText) { setState("error"); setErrMsg("Leere Antwort von KI erhalten."); return; }
+      // Antwort beginnt direkt nach dem Assistant-Prefill "{" — wieder voranstellen.
+      const text = "{" + rawText;
 
       let parsed: Record<string, unknown>;
       try {
