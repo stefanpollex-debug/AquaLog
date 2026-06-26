@@ -150,13 +150,16 @@ export function assessRisk(
     }
   }
 
-  // Chlor zu hoch — obere Grenze aus activeLimits, damit Dot und Banner konsistent sind
+  // Chlor zu hoch — obere Grenze aus activeLimits, damit Dot und Banner konsistent sind.
+  // Harte Gefahrenschwelle (danger.high) hat Vorrang vor dem generischen *1.5-Multiplikator,
+  // falls für den Pool-Typ eine explizite Quelle hinterlegt ist.
+  const clDangerHigh = activeLimits.cl.danger?.high ?? activeLimits.cl.max * 1.5;
   if (cl > activeLimits.cl.max) {
-    if (cl > activeLimits.cl.max * 1.5) {
+    if (cl >= clDangerHigh) {
       promote("danger");
       reasons.push(
         `🚨 Chlor zu hoch (${cl.toFixed(2)} mg/l) — nicht sicher zum Baden. ` +
-        `Maximum: ${activeLimits.cl.max} mg/l`
+        `Ab ${clDangerHigh} mg/l Nutzungssperre.`
       );
       urgentActions.push("Wasser verdünnen oder Teilwasserwechsel vornehmen");
     } else {

@@ -1,19 +1,38 @@
-export const LIMITS = {
+/** Engere "Idealzone" innerhalb von min–max + harte Gefahrenschwelle, die unabhängig
+ *  vom min/max-Multiplikator gilt. Optional — nur wo eine Quelle die Werte liefert. */
+export interface IdealRange { min: number; max: number; }
+export interface DangerThreshold { low?: number; high?: number; }
+
+export interface FieldLimit {
+  min: number; max: number; step: number;
+  sliderMin: number; sliderMax: number;
+  unit: string; label: string; color: string;
+  ideal?: IdealRange;
+  danger?: DangerThreshold;
+}
+
+export const LIMITS: Record<"cl" | "ph" | "temp" | "kh" | "gh", FieldLimit> = {
   cl:   { min: 0.5, max: 1.5, step: 0.1,  sliderMin: 0,   sliderMax: 5,   unit: "mg/l", label: "Chlor (Cl)",       color: "#0ea5e9" },
   ph:   { min: 7.2, max: 7.6, step: 0.05, sliderMin: 6.5, sliderMax: 8.5, unit: "",     label: "pH-Wert",          color: "#8b5cf6" },
   temp: { min: 20,  max: 28,  step: 0.5,  sliderMin: 10,  sliderMax: 45,  unit: "°C",   label: "Temperatur",       color: "#f97316" },
   kh:   { min: 80,  max: 120, step: 5,    sliderMin: 20,  sliderMax: 250, unit: "mg/l", label: "Alkalinität (KH)", color: "#10b981" },
   gh:   { min: 100, max: 200, step: 10,   sliderMin: 50,  sliderMax: 500, unit: "mg/l", label: "Gesamthärte (GH)", color: "#f472b6" },
-} as const;
+};
 
 export type FieldKey = keyof typeof LIMITS;
 
-/** Pool-typ-spezifische Grenzwerte — überschreibt nur min/max, Slider-Ranges bleiben gleich */
-export function getLimitsForPoolType(poolType: string) {
+/** Pool-typ-spezifische Grenzwerte — überschreibt min/max (+ optional ideal/danger), Slider-Ranges bleiben gleich */
+export function getLimitsForPoolType(poolType: string): Record<FieldKey, FieldLimit> {
   if (poolType === "Whirlpool / Spa") {
     return {
       ...LIMITS,
-      cl:   { ...LIMITS.cl,   min: 1.0, max: 5.0 },
+      // Quelle: Spa-Richtwerte (nicht DIN 19643 für öffentliche Becken) — 0.3–1.5 mg/l
+      // Zielband, 0.6–1.0 mg/l Idealzone, ab 3.0 mg/l harte Nutzungssperre.
+      cl: {
+        ...LIMITS.cl, min: 0.3, max: 1.5,
+        ideal:  { min: 0.6, max: 1.0 },
+        danger: { high: 3.0 },
+      },
       ph:   { ...LIMITS.ph,   min: 7.2, max: 7.8 },
       temp: { ...LIMITS.temp, min: 34,  max: 40  },
     };
@@ -26,7 +45,7 @@ export function getLimitsForPoolType(poolType: string) {
   };
 }
 
-export type ActiveLimits = ReturnType<typeof getLimitsForPoolType>;
+export type ActiveLimits = Record<FieldKey, FieldLimit>;
 
 export const POOL = {
   name: "Home Deluxe Spa DROP",

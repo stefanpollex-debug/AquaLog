@@ -19,6 +19,14 @@ export function ValueSlider({ field, value, touched, onChange, limits }: Props) 
   const st  = getStatus(field, value, limits);
   const thumb = st === "ok" ? "#22c55e" : st === "low" ? "#f59e0b" : "#ef4444";
 
+  // Engere Idealzone innerhalb von min–max, falls hinterlegt (z.B. Spa-Chlor 0.6–1.0 mg/l
+  // innerhalb des breiteren 0.3–1.5 mg/l Zielbands) — als kräftigeres Grün abgesetzt.
+  const idealL = l.ideal ? ((l.ideal.min - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100 : null;
+  const idealR = l.ideal ? ((l.ideal.max - base.sliderMin) / (base.sliderMax - base.sliderMin)) * 100 : null;
+  const trackBackground = (idealL != null && idealR != null)
+    ? `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${idealL}%,#4ade80 ${idealL}%,#4ade80 ${idealR}%,#d1fae5 ${idealR}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`
+    : `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`;
+
   return (
     <div style={{ marginTop: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -33,7 +41,7 @@ export function ValueSlider({ field, value, touched, onChange, limits }: Props) 
       <div style={{ position: "relative", height: 28, display: "flex", alignItems: "center" }}>
         <div style={{
           position: "absolute", left: 0, right: 0, height: 8, borderRadius: 8, overflow: "hidden",
-          background: `linear-gradient(to right,#fee2e2 0%,#fee2e2 ${okL}%,#d1fae5 ${okL}%,#d1fae5 ${okR}%,#fee2e2 ${okR}%,#fee2e2 100%)`,
+          background: trackBackground,
           opacity: touched ? 1 : 0.4,
         }} />
         {touched && (
@@ -59,7 +67,9 @@ export function ValueSlider({ field, value, touched, onChange, limits }: Props) 
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "#94a3b8", marginTop: 2 }}>
         <span>{base.sliderMin}{base.unit}</span>
-        <span style={{ color: "#22c55e", fontWeight: 600 }}>OK: {l.min}–{l.max}</span>
+        <span style={{ color: "#22c55e", fontWeight: 600 }}>
+          OK: {l.min}–{l.max}{l.ideal ? ` · Ideal: ${l.ideal.min}–${l.ideal.max}` : ""}
+        </span>
         <span>{base.sliderMax}{base.unit}</span>
       </div>
     </div>
