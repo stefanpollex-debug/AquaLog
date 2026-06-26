@@ -1,5 +1,6 @@
 import type { PoolEntry } from "../hooks/usePoolEntries";
-import { LIMITS, type ActiveLimits } from "./constants";
+import { LIMITS, type ActiveLimits, type FieldKey } from "./constants";
+import { getStatus } from "./status";
 
 // ── Öffentliche Typen ─────────────────────────────────────────────────────────
 
@@ -324,8 +325,9 @@ export function assessRisk(
 
   // ── 6. LSI — Langelier Sättigungs-Index ───────────────────────────────
 
+  let lsi: number | null = null;
   if (gh != null && kh != null && gh > 0 && kh > 0) {
-    const lsi = calculateLSI(ph, temp, gh, kh);
+    lsi = calculateLSI(ph, temp, gh, kh);
     if (lsi < -0.5) {
       promote("danger");
       reasons.push(
@@ -352,7 +354,27 @@ export function assessRisk(
     }
   }
 
-  // ── 7. Alles OK ───────────────────────────────────────────────────────
+  // ── 7. Zusammenfassung: Wie viele Werte sind außerhalb des Zielbereichs? ──
+  // Zählt low/high (nicht "warn"/"ok") für cl/ph/temp/kh/gh, plus CYA>90 und
+  // LSI außerhalb der Idealzone (±0.3) — unabhängig von den Einzeltexten oben,
+  // damit Dot-Status und Zusammenfassung garantiert übereinstimmen.
+  let outOfRangeCount = 0;
+  (["cl", "ph", "temp", "kh", "gh"] as FieldKey[]).forEach((k) => {
+    const v = { cl, ph, temp, kh, gh }[k];
+    if (v == null) return;
+    const s = getStatus(k, v, activeLimits);
+    if (s === "low" || s === "high") outOfRangeCount++;
+  });
+  if (cya != null && cya > 90) outOfRangeCount++;
+  if (lsi != null && Math.abs(lsi) > 0.3) outOfRangeCount++;
+
+  if (outOfRangeCount > 0) {
+    reasons.unshift(
+      `⚠️ ${outOfRangeCount} ${outOfRangeCount === 1 ? "Wert" : "Werte"} außerhalb — Korrektur nötig`
+    );
+  }
+
+  // ── 8. Alles OK ───────────────────────────────────────────────────────
 
   if (maxRisk === "safe") {
     reasons.push(`Alle Werte sicher für ${temp.toFixed(0)}°C Wassertemperatur`);
