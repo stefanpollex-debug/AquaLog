@@ -55,9 +55,14 @@ function tempFactor(temp: number): number {
   return TF_TABLE[TF_TABLE.length - 1][1];
 }
 
-/** LSI = pH + Tf(temp) + log₁₀(GH) + log₁₀(KH) − 12.1 */
+/** LSI = pH − pHs, mit pHs = 12.1 − p[Ca²⁺] − p[HCO₃⁻] − Tf(temp).
+ *  Ca²⁺ ≈ 40% der gemessenen Gesamthärte (GH misst Ca+Mg gemeinsam, LSI braucht nur Ca). */
 export function calculateLSI(ph: number, temp: number, gh: number, kh: number): number {
-  return ph + tempFactor(temp) + Math.log10(gh) + Math.log10(kh) - 12.1;
+  const ca   = gh * 0.4;
+  const pCa  = ca > 0 ? Math.log10(ca) : 0;
+  const pAlk = kh > 0 ? Math.log10(kh) : 0;
+  const pHs  = 12.1 - pCa - pAlk - tempFactor(temp);
+  return parseFloat((ph - pHs).toFixed(2));
 }
 
 // ── Kern-Engine ───────────────────────────────────────────────────────────────
