@@ -1,3 +1,5 @@
+import { daysSince } from "./status";
+
 export interface WaterAddition {
   id:          number;
   date:        string;    // "YYYY-MM-DD"
@@ -5,28 +7,47 @@ export interface WaterAddition {
   note?:       string;
 }
 
+/** Kompletter Drain & Refill — eigenständiges Konzept, kein Teilwechsel mit X Litern.
+ *  Für kleine Saisonpools oft der praktischere Weg als laufende Chemie-Feinjustierung. */
+export interface FullWaterChange {
+  id:    number;
+  date:  string;    // "YYYY-MM-DD"
+  note?: string;
+}
+
 export interface WaterChangeRecord {
-  additions:    WaterAddition[];
-  intervalDays: number;   // Erinnerungsintervall (Tage seit letzter Zugabe)
+  additions:              WaterAddition[];
+  fullChanges:             FullWaterChange[];
+  intervalDays:            number;   // Erinnerungsintervall Teilwechsel (Tage)
+  fullChangeIntervalDays:  number;   // Erinnerungsintervall kompletter Wechsel (Tage)
 }
 
 export const INTERVAL_OPTIONS = [7, 14, 30, 60] as const;
+export const FULL_INTERVAL_OPTIONS = [7, 14, 21, 30] as const;
 
 export const DEFAULT_WATER_CHANGE: WaterChangeRecord = {
-  additions:    [],
-  intervalDays: 14,
+  additions:              [],
+  fullChanges:             [],
+  intervalDays:            14,
+  fullChangeIntervalDays:  14,
 };
 
 export function lastAddition(record: WaterChangeRecord): WaterAddition | undefined {
   return record.additions[0];
 }
 
+export function lastFullChange(record: WaterChangeRecord): FullWaterChange | undefined {
+  return record.fullChanges[0];
+}
+
 export function daysSinceLastAddition(record: WaterChangeRecord): number | null {
   const last = lastAddition(record);
-  if (!last) return null;
-  const d   = new Date(last.date + "T12:00:00");
-  const now = new Date();
-  return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  return last ? daysSince(last.date) : null;
+}
+
+export function daysSinceLastFullChange(record: WaterChangeRecord): number | null {
+  const last = lastFullChange(record);
+  return last ? daysSince(last.date) : null;
 }
 
 /** Summe der zugefügten Liter (gesamt oder innerhalb der letzten X Tage) */

@@ -1,3 +1,5 @@
+import { daysSince } from "./status";
+
 export interface FilterEntry {
   id:    number;
   date:  string;               // "YYYY-MM-DD"
@@ -19,9 +21,7 @@ export const CLEAN_INTERVAL_OPTIONS   = [7,  14, 21] as const;
 export const REPLACE_INTERVAL_OPTIONS = [30, 60, 90] as const;
 
 export function daysSinceEntry(entry: FilterEntry): number {
-  const d   = new Date(entry.date + "T12:00:00");
-  const now = new Date();
-  return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  return daysSince(entry.date);
 }
 
 export type FilterStatus = "ok" | "warning" | "danger";
