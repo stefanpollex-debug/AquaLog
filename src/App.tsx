@@ -973,7 +973,9 @@ export default function App() {
           position: "fixed", top: 0, left: 0, right: 0,
           maxWidth: 480, margin: "0 auto",
           background: "#0369a1", color: "white",
-          padding: "11px 16px",
+          // Safe-Area-Inset oben — sonst sitzt der Button hinter der iPhone-Statusleiste/
+          // Dynamic Island und ist dort nicht antippbar.
+          padding: "calc(env(safe-area-inset-top, 12px) + 11px) 16px 11px",
           display: "flex", alignItems: "center", gap: 10,
           zIndex: 200, boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
         }}>
