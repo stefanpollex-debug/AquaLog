@@ -65,11 +65,16 @@ export const POOL = {
   type: "pool",
 } as const;
 
+// Demo-Eintrag für brandneue Installationen (nur sichtbar wenn entries_spa leer ist).
+// Werte bewusst in der Idealzone — eine Sicherheitswarnung als allererster Eindruck
+// wäre ein schlechter Einstieg. cl=3.5/temp=38 (alte Werte) lagen inzwischen über den
+// korrigierten Spa-Gefahrenschwellen (Cl >3.0, Temp >37°C) und hätten sofort eine
+// "Pool nicht benutzen"-Warnung ausgelöst.
 export const FIRST_ENTRY = {
   date: "2026-05-26",
-  cl: 3.5,
+  cl: 0.8,
   ph: 7.4,
-  temp: 38,
+  temp: 26,
   kh: 90,
   note: "Erstbetrieb – Pool neu befüllt",
   id: 1748217600000,
