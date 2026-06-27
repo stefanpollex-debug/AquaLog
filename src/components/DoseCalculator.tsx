@@ -95,7 +95,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
         <SliderRow label="Ziel"    value={clTarget}  onChange={setClTarget}  min={0}   max={5}   step={0.1} unit=" mg/l" />
         {clDelta < -0.05 ? (
           <div style={{ marginTop: 6, background: "#fef9c3", borderRadius: 8, padding: "7px 10px", fontSize: "0.75rem", color: "#713f12" }}>
-            ⏳ Abbauwarten — Abdeckung öffnen, Spa 24–48 Std. lüften
+            ⏳ Abbauwarten — Abdeckung öffnen, Pool 24–48 Std. lüften
           </div>
         ) : (
           <>
@@ -151,7 +151,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
           </div>
         )}
         <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
-          Zielbereich Spa: 7,2–7,6 · Erst pH korrigieren, dann Chlor zugeben
+          Zielbereich Pool: 7,2–7,6 · Erst pH korrigieren, dann Chlor zugeben
         </div>
       </div>
 
@@ -164,7 +164,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
         <SliderRow label="Ziel"    value={khTarget}  onChange={setKhTarget}  min={80}  max={120} step={5}  unit=" mg/l" />
         {khTooHigh ? (
           <div style={{ marginTop: 6, background: "#fef9c3", borderRadius: 8, padding: "7px 10px", fontSize: "0.75rem", color: "#713f12" }}>
-            ⚠️ KH zu hoch: Teilwasserwechsel empfohlen. Keine Chemikalien zur KH-Senkung im Spa.
+            ⚠️ KH zu hoch: Teilwasserwechsel empfohlen. Keine Chemikalien zur KH-Senkung im Pool.
           </div>
         ) : khDose > 0 ? (
           <>
@@ -180,7 +180,7 @@ export function DoseCalculator({ volumeLiters, currentCl, currentPh, currentKh, 
           </div>
         )}
         <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 6 }}>
-          Zielbereich Spa: 80–120 mg/l · Nach Zugabe pH ebenfalls prüfen
+          Zielbereich Pool: 80–120 mg/l · Nach Zugabe pH ebenfalls prüfen
         </div>
       </div>
 

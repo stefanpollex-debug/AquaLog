@@ -97,8 +97,8 @@ export function assessRisk(
 
   // ── 1. Temperatur-Grenzwerte ────────────────────────────────────────────
 
-  // Harte Gefahrenschwelle: pool-typ-spezifisch falls hinterlegt (z.B. Outdoor-Spa 37°C,
-  // da unbeheizt ungewöhnlich heiß = Sonnenüberhitzung), sonst genereller Fallback 42°C.
+  // Harte Gefahrenschwelle: pool-typ-spezifisch falls hinterlegt (z.B. unbeheizter
+  // Erholungspool 37°C, da ungewöhnlich heiß = Sonnenüberhitzung), sonst Fallback 42°C.
   const tempDangerHigh = activeLimits.temp.danger?.high ?? 42;
   let tempFlagged = false;
 

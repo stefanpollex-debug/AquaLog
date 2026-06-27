@@ -31,16 +31,17 @@ export function getLimitsForPoolType(poolType: string): Record<FieldKey, FieldLi
   if (poolType === "Whirlpool / Spa") {
     return {
       ...LIMITS,
-      // Quelle: Spa-Richtwerte (nicht DIN 19643 für öffentliche Becken) — 0.3–1.5 mg/l
-      // Zielband, 0.6–1.0 mg/l Idealzone, ab 3.0 mg/l harte Nutzungssperre.
+      // Richtwerte für einen privaten Erholungs-/Erfrischungspool (kein beheizter
+      // Whirlpool, kein öffentliches Becken nach DIN 19643) — 0.3–1.5 mg/l Zielband,
+      // 0.6–1.0 mg/l Idealzone, ab 3.0 mg/l harte Nutzungssperre.
       cl: {
         ...LIMITS.cl, min: 0.3, max: 1.5,
         ideal:  { min: 0.6, max: 1.0 },
         danger: { high: 3.0 },
       },
       ph:   { ...LIMITS.ph,   min: 7.2, max: 7.8 },
-      // Outdoor-Spa, nicht beheizter Whirlpool — 18–32°C Zielband, 24–28°C Idealzone,
-      // ab 37°C harte Gefahrenschwelle (Legionellen-Bereich).
+      // Unbeheizter Außenpool zum Erholen/Erfrischen, kein Whirlpool — 18–32°C
+      // Zielband, 24–28°C Idealzone, ab 37°C harte Gefahrenschwelle (Legionellen-Bereich).
       temp: {
         ...LIMITS.temp, min: 18, max: 32,
         ideal:  { min: 24, max: 28 },

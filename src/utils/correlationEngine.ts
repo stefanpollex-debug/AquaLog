@@ -90,7 +90,7 @@ export function analyzeProfiles(
     insights.push({
       type: "info",
       title: "Leitungswasser noch nicht erfasst",
-      body: "Trage deinen Leitungswasser-pH und -Chlorgehalt ein. AquaLog kann dann vorhersagen, wie sich ein Wasserwechsel auf deinen Spa auswirkt.",
+      body: "Trage deinen Leitungswasser-pH und -Chlorgehalt ein. AquaLog kann dann vorhersagen, wie sich ein Wasserwechsel auf deinen Pool auswirkt.",
       confidence: 0,
       samplesUsed: 0,
     });
@@ -105,11 +105,11 @@ export function analyzeProfiles(
     if (spaPhAvg !== null) {
       const phDiff = spaPhAvg - tapPhAvg;
       if (phDiff > 0.3) {
-        body += ` Das Leitungswasser ist saurer als dein Spa (Spa Ø pH ${spaPhAvg.toFixed(2)}). Nach einem Wasserwechsel wird der pH leicht sinken — pH-Plus bereithalten.`;
+        body += ` Das Leitungswasser ist saurer als dein Pool (Pool Ø pH ${spaPhAvg.toFixed(2)}). Nach einem Wasserwechsel wird der pH leicht sinken — pH-Plus bereithalten.`;
       } else if (phDiff < -0.3) {
-        body += ` Das Leitungswasser hat einen höheren pH als dein Spa (Spa Ø ${spaPhAvg.toFixed(2)}). Nach dem Wasserwechsel kann der pH leicht steigen — ggf. pH-Minus bereithalten.`;
+        body += ` Das Leitungswasser hat einen höheren pH als dein Pool (Pool Ø ${spaPhAvg.toFixed(2)}). Nach dem Wasserwechsel kann der pH leicht steigen — ggf. pH-Minus bereithalten.`;
       } else {
-        body += ` pH ähnlich wie dein Spa — beim Wasserwechsel ist kaum eine pH-Verschiebung zu erwarten.`;
+        body += ` pH ähnlich wie dein Pool — beim Wasserwechsel ist kaum eine pH-Verschiebung zu erwarten.`;
       }
     }
 
@@ -119,7 +119,7 @@ export function analyzeProfiles(
 
     insights.push({
       type: "tap_to_spa",
-      title: "Leitungswasser → Spa",
+      title: "Leitungswasser → Pool",
       body,
       confidence: Math.min(n / 5, 1),
       samplesUsed: n,
@@ -132,7 +132,7 @@ export function analyzeProfiles(
     insights.push({
       type: "info",
       title: "Regenwasser noch nicht gemessen",
-      body: "Optional: Miss den pH von Regenwasser in deiner Region. Regen hat typisch pH 5,5–6,5 und senkt den Spa-pH — besonders nach längerem Regen.",
+      body: "Optional: Miss den pH von Regenwasser in deiner Region. Regen hat typisch pH 5,5–6,5 und senkt den Pool-pH — besonders nach längerem Regen.",
       confidence: 0,
       samplesUsed: 0,
     });
@@ -145,17 +145,17 @@ export function analyzeProfiles(
 
     if (spaPhAvg !== null) {
       if (rainPhAvg < 6.5) {
-        body += ` Das ist deutlich saurer als dein Spa (Spa Ø pH ${spaPhAvg.toFixed(2)}). Starker Regen senkt deinen pH — nach Regentagen messen und ggf. pH-Plus zugeben.`;
+        body += ` Das ist deutlich saurer als dein Pool (Pool Ø pH ${spaPhAvg.toFixed(2)}). Starker Regen senkt deinen pH — nach Regentagen messen und ggf. pH-Plus zugeben.`;
       } else if (rainPhAvg < spaPhAvg - 0.2) {
-        body += ` Leicht saurer als dein Spa (Spa Ø ${spaPhAvg.toFixed(2)}) — nach intensivem Regen pH prüfen.`;
+        body += ` Leicht saurer als dein Pool (Pool Ø ${spaPhAvg.toFixed(2)}) — nach intensivem Regen pH prüfen.`;
       } else {
-        body += ` pH liegt nahe deinem Spa-Wert — Regen hat bei dir kaum Einfluss auf den pH.`;
+        body += ` pH liegt nahe deinem Pool-Wert — Regen hat bei dir kaum Einfluss auf den pH.`;
       }
     }
 
     insights.push({
       type: "rain_to_spa",
-      title: "Regenwasser → Spa",
+      title: "Regenwasser → Pool",
       body,
       confidence: Math.min(n / 3, 1),
       samplesUsed: n,
@@ -227,14 +227,14 @@ export function getSmartReminders(
       reminders.push({
         id: "heavy_rain",
         severity: "warn",
-        text: `🌧️ ${lastRainMm.toFixed(0)} mm Regen heute — pH im Spa prüfen (Regen ist sauer und senkt den pH).`,
+        text: `🌧️ ${lastRainMm.toFixed(0)} mm Regen heute — pH im Pool prüfen (Regen ist sauer und senkt den pH).`,
       });
     }
   } else if (lastRainMm >= 3) {
     reminders.push({
       id: "light_rain",
       severity: "info",
-      text: `🌦️ ${lastRainMm.toFixed(0)} mm Regen — nach dem nächsten Spa-Besuch pH kontrollieren.`,
+      text: `🌦️ ${lastRainMm.toFixed(0)} mm Regen — beim nächsten Pool-Besuch pH kontrollieren.`,
     });
   }
 

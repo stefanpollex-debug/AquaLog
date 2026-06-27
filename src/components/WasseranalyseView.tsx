@@ -308,7 +308,7 @@ export function WasseranalyseView({ spaEntries, lastRainMm }: Props) {
         background: "#f8fafc", borderRadius: 14, padding: "12px 14px",
         marginTop: 8, fontSize: "0.75rem", color: "#64748b", lineHeight: 1.6,
       }}>
-        <b>So funktioniert das:</b> AquaLog vergleicht dein Leitungs- und Regenwasser mit deinen Spa-Messwerten. Je mehr Messungen du einträgst, desto genauer werden die Vorhersagen (Konfidenz-Balken zeigt Datenbasis).
+        <b>So funktioniert das:</b> AquaLog vergleicht dein Leitungs- und Regenwasser mit deinen Pool-Messwerten. Je mehr Messungen du einträgst, desto genauer werden die Vorhersagen (Konfidenz-Balken zeigt Datenbasis).
       </div>
     </div>
   );

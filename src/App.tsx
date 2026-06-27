@@ -135,7 +135,6 @@ export default function App() {
   };
 
   const activeLimits   = getLimitsForPoolType(profile.poolType);
-  const isSpa          = profile.poolType === "Whirlpool / Spa";
 
   const last          = entries[0];
   const riskAssessment = last ? assessRisk(last, entries, activeLimits) : null;
@@ -386,7 +385,7 @@ export default function App() {
           <div style={{ background: "#7f1d1d", color: "white", padding: "14px 20px" }}>
             <div style={{ fontWeight: 800, fontSize: "0.92rem", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
               <span>🚨</span>
-              <span>SICHERHEITSWARNUNG — Spa nicht benutzen</span>
+              <span>SICHERHEITSWARNUNG — Pool nicht benutzen</span>
             </div>
             {riskAssessment.reasons.map((r, i) => (
               <div key={i} style={{
@@ -498,11 +497,12 @@ export default function App() {
                 </div>
               ))}
 
-              {/* CYA-Slider — standardmäßig nur für Freibäder, aber sichtbar sobald die KI
-                  per Foto einen Wert erkannt hat (auch bei Spa) — sonst würde ein erkannter
-                  Wert kommentarlos verworfen statt dem Nutzer zur Bestätigung gezeigt zu werden. */}
-              {(!isSpa || cyaTouched) && (
-                <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
+              {/* CYA-Slider — für alle Pool-Typen sichtbar. Ob ein Stabilisator relevant ist,
+                  hängt von der Sonnenexposition ab (Feld "Standort"), nicht vom Pool-Typ-Label —
+                  das Profil kennt ohnehin keine reine Innenraum-Option, jeder Pool ist hier
+                  implizit ein Außenpool. Frühere Annahme "Whirlpool/Spa = überdacht, kein UV"
+                  war für dieses Datenmodell nie zutreffend. */}
+              <div style={{ background: "white", borderRadius: 18, padding: 16, boxShadow: "0 2px 12px #0369a110", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>
                       Stabilisator (CYA)
@@ -562,7 +562,6 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-              )}
 
               {/* LSI Live-Vorschau im Eingabe-Tab — wenn kh + gh gesetzt */}
               {touched.kh && touched.gh && (() => {

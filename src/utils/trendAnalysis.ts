@@ -341,7 +341,7 @@ export function analyzeTrends(entries: PoolEntry[], limits?: ActiveLimits): Tren
         severity: "danger",
         icon: "🦠",
         title: "Legionellen-Risiko",
-        message: `Bei ${temp.toFixed(0)}°C muss Chlor ≥ 1,5 mg/l betragen (aktuell ${cl.toFixed(2)} mg/l). Spa nicht benutzen.`,
+        message: `Bei ${temp.toFixed(0)}°C muss Chlor ≥ 1,5 mg/l betragen (aktuell ${cl.toFixed(2)} mg/l). Pool nicht benutzen.`,
         action: "Chlor sofort erhöhen",
       });
     } else if (temp > 30 && cl < minCl) {
