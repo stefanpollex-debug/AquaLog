@@ -101,9 +101,9 @@ Teststreifen-Farbskala — interpoliere zwischen den Referenzpunkten, wenn die F
 - Gesamthärte/GH (mg/l): 0=Oliv/Khaki-Grau, 75=dunkles Oliv-Braun, 150=Ziegelrot, 250=Rot-Orange, 425=kräftiges Orange-Rot
 - Stabilisator/CYA (mg/l): 0=Gold-Orange, 50=Orange, 100=dunkleres Orange-Rot, 150=Rot-Orange, 300=kräftiges Orange-Rot
 
-Lies KH, GH und CYA nur ab, wenn die entsprechenden Testfelder im Foto klar erkennbar und nicht verdeckt/unscharf sind. Falls ein Feld nicht zuverlässig lesbar ist, setze den Wert auf null statt zu raten.
+Gib für KH, GH und CYA IMMER eine Zahl an, wenn das Testfeld überhaupt im Bild sichtbar ist — auch wenn du dir bei der Farbe nur mittelmäßig sicher bist. Der Nutzer sieht dein Ergebnis vor der Übernahme und kann es korrigieren — eine grobe Schätzung mit mittlerer Konfidenz ist deutlich nützlicher als null. Setze ein Feld NUR auf null, wenn das Testfeld selbst physisch nicht im Bild ist oder komplett verdeckt/unscharf ist (du also gar keine Farbe erkennen kannst, nicht nur eine unsichere). Wenn du eine Tendenz erkennst (z.B. "liegt zwischen 80 und 120, eher Richtung 120"), nenne die wahrscheinlichste Zahl statt null — senke stattdessen den confidence-Wert auf "low" oder "medium".
 
-WICHTIG — Konsistenz zwischen notes und Zahlenfeldern: Wenn du im notes-Feld für ein Testfeld eine konkrete Zahl oder Schätzung nennst (z.B. "deutet auf ca. 120 mg/l"), MUSS exakt dieser Wert auch im zugehörigen JSON-Zahlenfeld stehen — niemals eine Schätzung nur in notes erwähnen und das Zahlenfeld trotzdem auf null setzen. Ein Feld ist entweder zuverlässig lesbar (dann Zahl in beiden) oder nicht (dann null in beiden, und notes erklärt warum, z.B. "verdeckt"/"unscharf").
+WICHTIG — Konsistenz zwischen notes und Zahlenfeldern: Der Wert im JSON-Zahlenfeld muss IMMER exakt der Zahl entsprechen, die du in notes nennst oder andeutest. Wenn notes eine Schätzung wie "ca. 120 mg/l" enthält, steht im Zahlenfeld ebenfalls 120 — niemals eine Schätzung nur in notes erwähnen und das Zahlenfeld trotzdem auf null setzen.
 
 Thermometer: Lies die angezeigte Temperatur in Grad Celsius ab. Falls kein Thermometer sichtbar, setze "temp": null.
 
