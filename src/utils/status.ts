@@ -21,12 +21,17 @@ export function localToday(): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Differenz in vollen Kalendertagen (lokal), NICHT in 24h-Blöcken seit "jetzt".
+ *  Ein Mittags-Anker (T12:00:00) würde das ursprüngliche UTC-Problem nur auf ein
+ *  kleineres Zeitfenster verschieben: eine "heute"-Messung am Vormittag (vor 12 Uhr
+ *  lokal) würde bis Mittag weiterhin -1 statt 0 anzeigen. Stattdessen werden beide
+ *  Zeitpunkte auf lokale Mitternacht normiert — die Uhrzeit spielt dann keine Rolle mehr. */
 export function daysSince(dateStr: string): number {
-  // "T12:00:00" (ohne Z) verankert die Zeit lokal statt UTC-Mitternacht — sonst
-  // zeigt die App in Zeitzonen östlich von UTC (z.B. MESZ) bei "heute"-Einträgen
-  // kurz nach lokaler Mitternacht fälschlich -1 Tage an (Date.now() ist dann noch
-  // vor UTC-Mitternacht desselben Kalendertags).
-  return Math.floor((Date.now() - new Date(dateStr + "T12:00:00").getTime()) / 86400000);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const target    = new Date(y, m - 1, d);
+  const now       = new Date();
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((todayLocal.getTime() - target.getTime()) / 86400000);
 }
 
 export function avg(arr: Array<Record<string, number>>, key: string): number {
