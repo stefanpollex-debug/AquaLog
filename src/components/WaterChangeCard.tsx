@@ -1,18 +1,20 @@
 import { useState } from "react";
 import {
-  type WaterChangeRecord, INTERVAL_OPTIONS,
-  lastAddition, daysSinceLastAddition, totalLitersAdded,
-  calcDilution, getWaterStatus, STATUS_COLOR, STATUS_BG,
+  type WaterChangeRecord, INTERVAL_OPTIONS, FULL_INTERVAL_OPTIONS,
+  lastAddition, lastFullChange, daysSinceLastAddition, daysSinceLastFullChange,
+  totalLitersAdded, calcDilution, getWaterStatus, STATUS_COLOR, STATUS_BG,
 } from "../utils/waterChange";
 
 interface Props {
-  record:       WaterChangeRecord;
-  onAdd:        (litersAdded: number, note?: string) => void;
-  onDelete:     (id: number) => void;
-  onSaveRecord: (r: WaterChangeRecord) => void;
-  poolVolume:   number;    // Liter
-  lastCl?:      number;    // aktueller Cl-Messwert für Verdünnungsberechnung
-  lastPh?:      number;    // aktueller pH-Messwert
+  record:           WaterChangeRecord;
+  onAdd:            (litersAdded: number, note?: string) => void;
+  onDelete:         (id: number) => void;
+  onAddFullChange:  (note?: string) => void;
+  onDeleteFullChange: (id: number) => void;
+  onSaveRecord:     (r: WaterChangeRecord) => void;
+  poolVolume:       number;    // Liter
+  lastCl?:          number;    // aktueller Cl-Messwert für Verdünnungsberechnung
+  lastPh?:          number;    // aktueller pH-Messwert
 }
 
 function notifState(): "idle" | "granted" | "denied" {
@@ -22,11 +24,30 @@ function notifState(): "idle" | "granted" | "denied" {
   return "idle";
 }
 
-export function WaterChangeCard({ record, onAdd, onDelete, onSaveRecord, poolVolume, lastCl, lastPh }: Props) {
+export function WaterChangeCard({
+  record, onAdd, onDelete, onAddFullChange, onDeleteFullChange, onSaveRecord,
+  poolVolume, lastCl, lastPh,
+}: Props) {
   const [litersInput, setLitersInput] = useState<string>("");
   const [noteInput,   setNoteInput]   = useState("");
   const [saved,       setSaved]       = useState(false);
   const [notif,       setNotif]       = useState(notifState());
+  const [fullNote,    setFullNote]    = useState("");
+  const [fullSaved,   setFullSaved]   = useState(false);
+
+  const fullDaysSince = daysSinceLastFullChange(record);
+  const fullStatus    = getWaterStatus(fullDaysSince, record.fullChangeIntervalDays);
+  const fullColor     = STATUS_COLOR[fullStatus];
+  const fullBg        = STATUS_BG[fullStatus];
+  const lastFull       = lastFullChange(record);
+  const recentFull     = record.fullChanges.slice(0, 5);
+
+  const handleFullChange = () => {
+    onAddFullChange(fullNote.trim() || undefined);
+    setFullNote("");
+    setFullSaved(true);
+    setTimeout(() => setFullSaved(false), 2000);
+  };
 
   const liters     = parseFloat(litersInput) || 0;
   const daysSince  = daysSinceLastAddition(record);
@@ -59,9 +80,124 @@ export function WaterChangeCard({ record, onAdd, onDelete, onSaveRecord, poolVol
   };
 
   return (
-    <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
+    <div>
+      {/* ── Kompletter Wasserwechsel — Hauptfunktion bei kleinen Saisonpools ── */}
+      <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, color: "#0369a1", marginBottom: 14, fontSize: "0.95rem" }}>
+          🔄 Kompletter Wasserwechsel
+        </div>
 
-      {/* ── Header + Status ─────────────────────────────────── */}
+        <div style={{
+          background: fullBg, borderRadius: 14, padding: "14px 16px", marginBottom: 14,
+          display: "flex", alignItems: "center", gap: 16,
+        }}>
+          <div style={{ textAlign: "center", flexShrink: 0 }}>
+            {fullDaysSince !== null ? (
+              <>
+                <div style={{ fontWeight: 900, fontSize: "2.2rem", color: fullColor, lineHeight: 1 }}>{fullDaysSince}</div>
+                <div style={{ fontSize: "0.58rem", color: fullColor, fontWeight: 700, marginTop: 2, letterSpacing: "0.05em" }}>TAGE</div>
+              </>
+            ) : (
+              <div style={{ fontSize: "1.8rem" }}>🔄</div>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, color: "#1e293b", fontSize: "0.85rem", marginBottom: 2 }}>
+              {fullDaysSince === null
+                ? "Noch nie komplett gewechselt"
+                : fullDaysSince > record.fullChangeIntervalDays
+                  ? "⚠️ Kompletter Wechsel empfohlen"
+                  : "seit letztem kompletten Wechsel"}
+            </div>
+            {lastFull && (
+              <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                Letzter Wechsel: {new Date(lastFull.date + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
+                {lastFull.note ? ` · ${lastFull.note}` : ""}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={handleFullChange}
+          style={{
+            width: "100%", padding: "12px",
+            background: "linear-gradient(90deg,#0369a1,#0ea5e9)",
+            color: "white", border: "none", borderRadius: 10,
+            fontWeight: 700, cursor: "pointer", fontSize: "0.92rem", marginBottom: 8,
+          }}
+        >
+          ✅ Heute komplett gewechselt — Pool neu befüllt
+        </button>
+
+        <input
+          type="text" value={fullNote}
+          onChange={e => setFullNote(e.target.value)}
+          placeholder="Notiz (optional, z.B. Algen entfernt)"
+          style={{
+            width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10,
+            padding: "8px 12px", fontSize: "0.85rem",
+            boxSizing: "border-box", marginBottom: 8,
+          }}
+        />
+
+        {fullSaved && (
+          <div style={{ background: "#d1fae5", borderRadius: 8, padding: "7px 10px", fontSize: "0.78rem", color: "#065f46", fontWeight: 600, textAlign: "center", marginBottom: 8 }}>
+            ✅ Gespeichert — Vergiss nicht, nach dem Befüllen frisch zu messen!
+          </div>
+        )}
+
+        {/* Erinnerungs-Intervall */}
+        <div style={{ marginBottom: recentFull.length > 0 ? 14 : 0 }}>
+          <div style={{ fontSize: "0.72rem", fontWeight: 600, color: "#94a3b8", marginBottom: 6 }}>
+            Erinnerung alle
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {FULL_INTERVAL_OPTIONS.map(d => (
+              <button key={d} onClick={() => onSaveRecord({ ...record, fullChangeIntervalDays: d })} style={{
+                flex: 1, padding: "7px 0",
+                border:     `1.5px solid ${record.fullChangeIntervalDays === d ? "#0369a1" : "#e2e8f0"}`,
+                borderRadius: 8,
+                background: record.fullChangeIntervalDays === d ? "#e0f2fe" : "white",
+                color:      record.fullChangeIntervalDays === d ? "#0369a1" : "#64748b",
+                fontWeight: record.fullChangeIntervalDays === d ? 700 : 500,
+                fontSize: "0.78rem", cursor: "pointer",
+              }}>
+                {d}d
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {recentFull.length > 0 && (
+          <div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#94a3b8", marginBottom: 6 }}>Letzte komplette Wechsel</div>
+            {recentFull.map((c, i) => (
+              <div key={c.id} style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "5px 0",
+                borderTop: i === 0 ? "none" : "1px solid #f1f5f9",
+              }}>
+                <span style={{ fontSize: "0.85rem" }}>🔄</span>
+                <span style={{ fontSize: "0.72rem", color: "#475569" }}>
+                  {new Date(c.date + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
+                </span>
+                {c.note && (
+                  <span style={{ fontSize: "0.68rem", color: "#94a3b8", fontStyle: "italic", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    · {c.note}
+                  </span>
+                )}
+                <button
+                  onClick={() => onDeleteFullChange(c.id)}
+                  style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#e2e8f0", fontSize: "0.85rem", padding: "0 0 0 4px", flexShrink: 0 }}
+                >🗑️</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Teilwasserwechsel — für gelegentliches Nachfüllen zwischendurch ── */}
+      <div style={{ background: "white", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px #0369a110", marginBottom: 14 }}>
       <div style={{ fontWeight: 700, color: "#0369a1", marginBottom: 14, fontSize: "0.95rem" }}>
         💧 Teilwasserwechsel
       </div>
@@ -271,6 +407,7 @@ export function WaterChangeCard({ record, onAdd, onDelete, onSaveRecord, poolVol
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
