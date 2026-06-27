@@ -97,15 +97,17 @@ Teststreifen-Typ: Bayrol Cl & Br Quicktest 6in1 — 5 Testfelder von oben nach u
 Teststreifen-Farbskala — interpoliere zwischen den Referenzpunkten, wenn die Farbe dazwischen liegt:
 - Chlor (Cl, mg/l): 0.0=fast farblos/cremeweiß, 0.5=sehr helles Rosa, 1.0=helles Rosa, 2.0=mittleres Pink/Rosé, 5.0=kräftiges Pink-Magenta
 - pH: 6.6=Gelb/Goldgelb, 7.0=Orange, 7.4=Orange-Rot/Koralle, 7.8=Rot, 8.2=Magenta-Rot
-- Alkalinität/KH (mg/l): 0=helles Gelb-Oliv, 40=Olivgrün, 80=mittleres Olivgrün, 120=dunkleres Grau-Grün, 180=Grau
+- Alkalinität/KH (mg/l): 0=helles Gelb-Oliv, 40=Olivgrün, 80=mittleres Olivgrün, 120=dunkleres Grau-Grün (kann je nach Lichtverhältnissen auch blaugrau/grauviolett wirken), 180=Grau
 - Gesamthärte/GH (mg/l): 0=Oliv/Khaki-Grau, 75=dunkles Oliv-Braun, 150=Ziegelrot, 250=Rot-Orange, 425=kräftiges Orange-Rot
 - Stabilisator/CYA (mg/l): 0=Gold-Orange, 50=Orange, 100=dunkleres Orange-Rot, 150=Rot-Orange, 300=kräftiges Orange-Rot
 
 Lies KH, GH und CYA nur ab, wenn die entsprechenden Testfelder im Foto klar erkennbar und nicht verdeckt/unscharf sind. Falls ein Feld nicht zuverlässig lesbar ist, setze den Wert auf null statt zu raten.
 
+WICHTIG — Konsistenz zwischen notes und Zahlenfeldern: Wenn du im notes-Feld für ein Testfeld eine konkrete Zahl oder Schätzung nennst (z.B. "deutet auf ca. 120 mg/l"), MUSS exakt dieser Wert auch im zugehörigen JSON-Zahlenfeld stehen — niemals eine Schätzung nur in notes erwähnen und das Zahlenfeld trotzdem auf null setzen. Ein Feld ist entweder zuverlässig lesbar (dann Zahl in beiden) oder nicht (dann null in beiden, und notes erklärt warum, z.B. "verdeckt"/"unscharf").
+
 Thermometer: Lies die angezeigte Temperatur in Grad Celsius ab. Falls kein Thermometer sichtbar, setze "temp": null.
 
-Berücksichtige den zusätzlichen Kontext bei der Einschätzung der Messwerte und der notes.
+Berücksichtige den zusätzlichen Kontext bei der Einschätzung der Messwerte und der notes. Starke Sonneneinstrahlung kann Farben auf dem Foto verfälschen — berücksichtige das bei der Einschätzung, aber vermeide es trotzdem, ein eigentlich lesbares Feld allein deswegen auf null zu setzen.
 
 Deine gesamte Antwort besteht NUR aus dem folgenden JSON-Objekt — keine Überschriften, keine Aufzählung der einzelnen Felder, keine Markdown-Formatierung, kein Fließtext davor oder danach, keine Backticks. Das allererste Zeichen deiner Antwort ist "{", das letzte "}". Schreibe keine Analyse oder Begründung aus — bewerte die Felder, aber gib nur das Ergebnis als JSON zurück:
 {"cl":<Zahl>,"ph":<Zahl>,"temp":<Zahl oder null>,"kh":<Zahl oder null>,"gh":<Zahl oder null>,"cya":<Zahl oder null>,"confidence":"low|medium|high","notes":"<kurze Beschreibung was du siehst und was der Kontext bedeutet>"}
@@ -269,6 +271,9 @@ Falls gar kein Teststreifen erkennbar: {"error":"Kein Teststreifen erkennbar"}`,
             </div>
             <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 3 }}>
               KI liest Cl, pH, KH, GH, CYA und Temperatur automatisch aus
+            </div>
+            <div style={{ fontSize: "0.68rem", color: "#94a3b8", marginTop: 6 }}>
+              💡 Im Schatten fotografieren — pralle Sonne verfälscht die Farben auf dem Streifen
             </div>
           </div>
           <button onClick={openGallery} type="button"
