@@ -39,7 +39,7 @@ import { WasseranalyseView }    from "./components/WasseranalyseView";
 import { type PoolEntry, type ChemicalAddition } from "./hooks/usePoolEntries";
 import { useWaterChange }    from "./hooks/useWaterChange";
 import { useFilterLog }      from "./hooks/useFilterLog";
-import { daysSinceLastFullChange, getWaterStatus } from "./utils/waterChange";
+import { daysSinceLastAddition, getWaterStatus } from "./utils/waterChange";
 import { daysSinceEntry }    from "./utils/filterLog";
 
 type Tab = "eingabe" | "verlauf" | "trends" | "hinweise" | "quellen";
@@ -142,11 +142,9 @@ export default function App() {
   const daysSinceLast = last ? daysSince(last.date) : null;
   const staleWarn     = daysSinceLast !== null && daysSinceLast >= STALE_DAYS;
   const volumeM3         = profile.volumeLiters / 1000;
-  // Kompletter Wechsel ist jetzt die Hauptmethode (statt Teilwechsel) — Banner/Reminder
-  // richten sich entsprechend nach fullChanges, nicht mehr nach additions.
   const waterChangeDue = getWaterStatus(
-    daysSinceLastFullChange(waterChange.record),
-    waterChange.record.fullChangeIntervalDays
+    daysSinceLastAddition(waterChange.record),
+    waterChange.record.intervalDays
   ) === "danger";
 
   // ── Browser-Benachrichtigungen (PWA) ─────────────────────────────────────
@@ -173,11 +171,11 @@ export default function App() {
     }
   }, [filterLog.lastClean, filterLog.lastReplace, filterLog.settings, notify]);
 
-  // Wasserwechsel-Erinnerung (kompletter Wechsel = Hauptmethode)
+  // Wasserwechsel-Erinnerung (Teilwechsel = tatsächliche Nutzung)
   useEffect(() => {
-    const d = daysSinceLastFullChange(waterChange.record);
-    if (d !== null && d >= waterChange.record.fullChangeIntervalDays)
-      notify(103, "waterChangeNotified", `🔄 Kompletter Wasserwechsel fällig — letzter Wechsel vor ${d} Tagen`);
+    const d = daysSinceLastAddition(waterChange.record);
+    if (d !== null && d >= waterChange.record.intervalDays)
+      notify(103, "waterChangeNotified", `💧 Teilwasserwechsel fällig — letzter Eintrag vor ${d} Tagen`);
   }, [waterChange.record, notify]);
 
   const poolTips = last
@@ -297,35 +295,30 @@ export default function App() {
                 })}
               </div>
 
-              {/* Wasserwechsel-Kachel — Hauptfunktion bei kleinen Saisonpools, daher
-                  prominent im Header statt der LSI-Kachel (die jetzt im Eingabe-Tab und
-                  in der Verlaufsliste verfügbar bleibt, aber nicht mehr vorrangig ist). */}
-              {(() => {
-                const fullDays  = daysSinceLastFullChange(waterChange.record);
-                const fullStat  = getWaterStatus(fullDays, waterChange.record.fullChangeIntervalDays);
-                const fullColor = fullStat === "danger" ? "#fca5a5" : fullStat === "warning" ? "#fde68a" : "#bbf7d0";
-                return (
-                  <div style={{ marginTop: 8, background: "rgba(255,255,255,0.12)", borderRadius: 10, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.7rem", opacity: 0.85, fontWeight: 600 }}>🔄 Kompletter Wasserwechsel</span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: fullColor }}>
-                      {fullDays === null ? "noch nie" : `vor ${fullDays} Tagen`}
-                      {fullStat === "danger" ? " — fällig!" : ""}
-                    </span>
-                  </div>
-                );
-              })()}
-
-              {/* LSI — nur noch als stille Sicherheits-Eskalation, wenn wirklich stark
-                  korrosiv/kalkbildend. Normalfall: siehe Eingabe-Tab/Verlauf. */}
+              {/* LSI-Kachel — wieder prominent: ohne kompletten Wechsel steht das Wasser
+                  lange im Pool, Korrosions-/Kalk-Risiko ist dann eher relevanter, nicht
+                  weniger. Nur wenn gh + kh im letzten Eintrag vorhanden. */}
               {last.gh != null && last.kh != null && (() => {
                 const lsi = calculateLSI(last.ph, last.temp, last.gh, last.kh);
-                if (Math.abs(lsi) <= 0.5) return null;
-                const lsiColor = lsi < 0 ? "#ef4444" : "#f97316";
-                const lsiLabel = lsi < 0 ? "Stark korrosiv" : "Stark kalkbildend";
+                const pct = Math.max(0, Math.min(100, ((lsi + 1) / 2) * 100));
+                const lsiColor = lsi < -0.3 ? "#ef4444" : lsi > 0.3 ? "#f97316" : "#22c55e";
+                const lsiLabel = lsi < -0.5 ? "Stark korrosiv"
+                               : lsi < -0.3 ? "Leicht korrosiv"
+                               : lsi > 0.5  ? "Stark kalkbildend"
+                               : lsi > 0.3  ? "Leicht kalkbildend"
+                               : "Ausgewogen ✓";
                 return (
-                  <div style={{ marginTop: 8, background: "rgba(255,255,255,0.12)", borderRadius: 10, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.7rem", opacity: 0.85, fontWeight: 600 }}>LSI</span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: lsiColor }}>{lsi.toFixed(2)} — {lsiLabel}</span>
+                  <div style={{ marginTop: 8, background: "rgba(255,255,255,0.12)", borderRadius: 10, padding: "8px 12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: "0.7rem", opacity: 0.85, fontWeight: 600 }}>Langelier-Index (LSI)</span>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: lsiColor }}>{lsi.toFixed(2)} — {lsiLabel}</span>
+                    </div>
+                    <div style={{ position: "relative", height: 8, borderRadius: 4, background: "linear-gradient(to right,#ef4444 0%,#f59e0b 22%,#22c55e 40%,#22c55e 60%,#f59e0b 78%,#ef4444 100%)" }}>
+                      <div style={{ position: "absolute", top: -3, left: `calc(${pct}% - 7px)`, width: 14, height: 14, borderRadius: "50%", background: "white", border: `3px solid ${lsiColor}`, boxShadow: `0 0 6px ${lsiColor}88` }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.6rem", opacity: 0.55, marginTop: 4 }}>
+                      <span>−1.0 korrosiv</span><span>0 ideal</span><span>+1.0 kalkig</span>
+                    </div>
                   </div>
                 );
               })()}
@@ -442,7 +435,7 @@ export default function App() {
                 fontWeight: 700, fontSize: "0.85rem",
                 background: staleWarn ? "rgba(0,0,0,0.18)" : undefined,
               }}>
-                🔄 Kompletter Wasserwechsel fällig – Pool ablassen und neu befüllen!
+                💧 Teilwasserwechsel fällig – Frischwasser zugeben!
               </div>
             )}
           </div>
